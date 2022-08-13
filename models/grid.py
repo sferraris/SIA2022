@@ -2,14 +2,14 @@ import arcade
 import random
 
 # Set how many rows and columns we will have
-ROW_COUNT = 17
-COLUMN_COUNT = 15
+ROW_COUNT = 8
+COLUMN_COUNT = 6
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
 HEIGHT = 32
 
-#Set how many moves does the user have
+# Set how many moves does the user have
 MOVES = 1000
 
 # This sets the margin between each cell
@@ -33,26 +33,31 @@ class MyGame(arcade.Window):
     Main application class.
     """
 
-    def __init__(self, width, height, title):
+    def __init__(self, width, height, title, moves):
         """
         Set up the application.
         """
 
         super().__init__(width, height, title)
 
+
         # Create a 2 dimensional array. A two-dimensional
         # array is simply a list of lists.
         self.colored_cells = []
         self.border_cells = []
         self.current_color = None
-        self.moves = MOVES
-
+        self.moves = moves
 
         self.grid = []
         self.colors = [arcade.color.PINK, arcade.color.WHITE, arcade.color.RED, arcade.color.GREEN, arcade.color.BLUE,
                        arcade.color.YELLOW, arcade.color.GRAY]
         self.steps = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 
+        self.set_grid()
+        self.current_color = self.grid[ROW_COUNT - 3][0]
+        self.get_initial_info()
+
+    def set_grid(self):
         for row in range(ROW_COUNT):
             # Add an empty array that will hold each cell
             # in this row
@@ -68,8 +73,7 @@ class MyGame(arcade.Window):
                 else:
                     self.grid[row].append(random.randint(0, 5))  # Append a cell
 
-        self.current_color = self.grid[ROW_COUNT - 3][0]
-        self.get_initial_info()
+        return self.grid
 
     def on_draw(self):
         """
@@ -171,12 +175,3 @@ class MyGame(arcade.Window):
                 initial_colored_cells.append(cell)
 
         return initial_colored_cells
-
-
-def main():
-    game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    arcade.run()
-
-
-if __name__ == "__main__":
-    main()
