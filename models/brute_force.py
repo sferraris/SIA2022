@@ -25,8 +25,9 @@ SCREEN_TITLE = "Brute Force"
 
 
 class Node:
-    def __init__(self, color):
+    def __init__(self, color, cells_to_paint):
         self.color = color
+        self.cells_to_paint = cells_to_paint
         self.children = []
 
 
@@ -40,13 +41,13 @@ def brute_force(game: MyGame):
         for color in range(COLORS - 1):
             if color != parent_color:
                 options_tree.children.append(Node(color))
-        
+
 
 
 def main():
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, MOVES)
-    grid = game.grid.copy()
-    brute_force(grid)
+    #grid = game.grid.copy()
+    #brute_force(grid)
 
     arcade.run()
 

@@ -2,8 +2,8 @@ import arcade
 import random
 
 # Set how many rows and columns we will have
-ROW_COUNT = 8
-COLUMN_COUNT = 6
+ROW_COUNT = 2 + 3
+COLUMN_COUNT = 3
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
@@ -125,7 +125,7 @@ class MyGame(arcade.Window):
         if row == ROW_COUNT - 1 and column < 6 and color != self.current_color and self.moves > 0:
             self.moves -= 1
             print(f"Moves Left {self.moves}")
-            related_cells = self.get_related_cells(self.border_cells.copy(), color)
+            related_cells = self.get_related_cells(self.border_cells.copy(), color, self.grid, self.border_cells)
             cells_to_paint = self.colored_cells + self.border_cells
             for cell in cells_to_paint:
                 r = cell[0]
@@ -151,7 +151,7 @@ class MyGame(arcade.Window):
     def get_initial_info(self):
         row = ROW_COUNT - 3
         column = 0
-        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color)
+        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid, self.border_cells)
 
         for cell in initial_colored_cells:
             if self.is_border(cell[0], cell[1]):
@@ -159,7 +159,7 @@ class MyGame(arcade.Window):
             else:
                 self.colored_cells.append(cell)
 
-    def get_related_cells(self, cells, color):
+    def get_related_cells(self, cells, color, grid, border_cells):
         initial_colored_cells = []
         colored_cells_aux = cells
         while len(colored_cells_aux) > 0:
@@ -168,10 +168,10 @@ class MyGame(arcade.Window):
             column = cell[1]
             for step in self.steps:
                 if is_valid(row + step[0], column + step[1]) \
-                        and color == self.grid[row + step[0]][column + step[1]] \
+                        and color == grid[row + step[0]][column + step[1]] \
                         and [row + step[0], column + step[1]] not in initial_colored_cells:
                     colored_cells_aux.append([row + step[0], column + step[1]])
-            if cell not in self.border_cells:
+            if cell not in border_cells:
                 initial_colored_cells.append(cell)
 
         return initial_colored_cells
