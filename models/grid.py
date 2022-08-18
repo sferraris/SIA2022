@@ -2,8 +2,8 @@ import arcade
 import random
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 3
-COLUMN_COUNT = 3
+ROW_COUNT = 2 + 4
+COLUMN_COUNT = 4
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
@@ -33,7 +33,7 @@ class MyGame(arcade.Window):
     Main application class.
     """
 
-    def __init__(self, width, height, title, moves):
+    def __init__(self, width, height, title, moves, grid):
         """
         Set up the application.
         """
@@ -53,9 +53,13 @@ class MyGame(arcade.Window):
                        arcade.color.YELLOW, arcade.color.GRAY]
         self.steps = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 
-        self.set_grid()
+        if grid is None:
+            self.set_grid()
+        else:
+            self.grid = grid
         self.current_color = self.grid[ROW_COUNT - 3][0]
         self.get_initial_info()
+
 
     def set_grid(self):
         for row in range(ROW_COUNT):
@@ -136,15 +140,15 @@ class MyGame(arcade.Window):
             self.current_color = color
 
             for cell in self.border_cells:
-                if not self.is_border(cell[0], cell[1]):
+                if not self.is_border(cell[0], cell[1], self.grid.copy()):
                     self.border_cells.remove(cell)
                     self.colored_cells.append(cell)
 
-    def is_border(self, row, column):
+    def is_border(self, row, column, grid):
         for step in self.steps:
             if is_valid(row + step[0], column + step[1]):
-                color = self.grid[row][column]
-                if color != self.grid[row + step[0]][column + step[1]]:
+                color = grid[row][column]
+                if color != grid[row + step[0]][column + step[1]]:
                     return True
         return False
 
@@ -154,22 +158,30 @@ class MyGame(arcade.Window):
         initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid, self.border_cells)
 
         for cell in initial_colored_cells:
-            if self.is_border(cell[0], cell[1]):
+            if self.is_border(cell[0], cell[1], self.grid.copy()):
                 self.border_cells.append(cell)
             else:
                 self.colored_cells.append(cell)
 
     def get_related_cells(self, cells, color, grid, border_cells):
         initial_colored_cells = []
-        colored_cells_aux = cells
+        colored_cells_aux = cells.copy()
+        n = 0
+
         while len(colored_cells_aux) > 0:
+            if n == 900:
+                print("estoy en este loop")
+                print(colored_cells_aux)
+                print(f"border {border_cells}")
+            n += 1
             cell = colored_cells_aux.pop()
             row = cell[0]
             column = cell[1]
             for step in self.steps:
                 if is_valid(row + step[0], column + step[1]) \
                         and color == grid[row + step[0]][column + step[1]] \
-                        and [row + step[0], column + step[1]] not in initial_colored_cells:
+                        and [row + step[0], column + step[1]] not in initial_colored_cells \
+                        and [row + step[0], column + step[1]] not in cells:
                     colored_cells_aux.append([row + step[0], column + step[1]])
             if cell not in border_cells:
                 initial_colored_cells.append(cell)
