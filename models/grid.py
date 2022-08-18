@@ -166,14 +166,8 @@ class MyGame(arcade.Window):
     def get_related_cells(self, cells, color, grid, border_cells):
         initial_colored_cells = []
         colored_cells_aux = cells.copy()
-        n = 0
 
         while len(colored_cells_aux) > 0:
-            if n == 900:
-                print("estoy en este loop")
-                print(colored_cells_aux)
-                print(f"border {border_cells}")
-            n += 1
             cell = colored_cells_aux.pop()
             row = cell[0]
             column = cell[1]
