@@ -2,8 +2,8 @@ import arcade
 import random
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 2
-COLUMN_COUNT = 2
+ROW_COUNT = 2 + 6
+COLUMN_COUNT = 6
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30

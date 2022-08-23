@@ -1,3 +1,5 @@
+import operator
+
 from grid import MyGame
 import arcade
 import copy
@@ -5,15 +7,15 @@ import anytree
 from anytree import AnyNode, RenderTree
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 2
-COLUMN_COUNT = 2
+ROW_COUNT = 2 + 6
+COLUMN_COUNT = 6
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
 HEIGHT = 32
 
 # Set how many moves does the user have
-MOVES = 2
+MOVES = 15
 
 COLORS = 6
 
@@ -40,10 +42,13 @@ class Node:
         self.parent = None
 
     def __str__(self) -> str:
-        return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
+        #return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
+        return f" color: {get_color(self.color)} -> {self.children}"
 
     def __repr__(self) -> str:
-        return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
+        return f" color: {get_color(self.color)} -> {self.children}"
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 
 def get_decision_tree(game: MyGame):
@@ -131,7 +136,6 @@ def BFS_alg(tree: Node, game: MyGame):
     while bfs_queue:
         node = bfs_queue.pop(0)
         node.win = 1
-        #print(f"Color: {get_color(node.color)}, Moves: {node.moves}")
         if node.moves > 0:
             for color in range(6):
                 if color != node.color:
@@ -151,25 +155,64 @@ def BFS_alg(tree: Node, game: MyGame):
     return None
 
 
+def greedy(game: MyGame):
+    tree = Node(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(), MOVES, 0)
+    greedy_rec(tree, game)
+    return tree
+
+
+def greedy_rec(node: Node, game: MyGame):
+    children_array = []
+    for color in range(6):
+        if color != node.color:
+            child = get_child(node, color, game)
+            children_array.append(child)
+    children_array.sort(key=operator.itemgetter('cells_to_paint'), reverse=True)
+
+    for child in children_array:
+        if node.win == 0:
+            if len(child.border_cells) + len(child.colored_cells) == COLUMN_COUNT * (ROW_COUNT - 2):
+                child.win = 1
+                node.win = 1
+                node.children.append(child)
+                return 1
+            elif child.moves > 0:
+                return_value = greedy_rec(child, game)
+                if return_value == 1:
+                    node.win = 1
+                    node.children.append(child)
+                    return 1
+
+                
+
+def get_child(node: Node, color: int, game: MyGame):
+    child_color = color
+    cells_to_paint = game.get_related_cells(copy.deepcopy(node.border_cells), color, node.grid,
+                                            copy.deepcopy(node.border_cells))
+    child_cells_to_paint = len(cells_to_paint)
+    child_grid = copy.deepcopy(node.grid)
+    child_moves = node.moves - 1
+
 def get_color(number):
     colors = ["PINK", "WHITE", "RED", "GREEN", "BLUE", "YELLOW"]
     return colors[number]
+
 
 def main():
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, MOVES, None)
     g = copy.deepcopy(game.grid)
 
-    tree = DFS(game)
-    #tree = get_decision_tree(game)
+    tree = greedy(game)
+    # tree = get_decision_tree(game)
     print(tree)
     # open text file
-    #text_file = open("./data.json", "w")
+    # text_file = open("./data.json", "w")
 
     # write string to file
-    #text_file.write(tree.__str__())
+    # text_file.write(tree.__str__())
 
     # close file
-    #text_file.close()
+    # text_file.close()
 
     arcade.close_window()
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, MOVES, g)
