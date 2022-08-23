@@ -1,4 +1,5 @@
 import operator
+import bisect
 
 from grid import MyGame
 import arcade
@@ -7,15 +8,15 @@ import anytree
 from anytree import AnyNode, RenderTree
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 6
-COLUMN_COUNT = 6
+ROW_COUNT = 2 + 2
+COLUMN_COUNT = 2
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
 HEIGHT = 32
 
 # Set how many moves does the user have
-MOVES = 15
+MOVES = 2
 
 COLORS = 6
 
@@ -26,7 +27,7 @@ MARGIN = 1
 # Do the math to figure out our screen dimensions
 SCREEN_WIDTH = (WIDTH + MARGIN) * COLUMN_COUNT + MARGIN
 SCREEN_HEIGHT = (HEIGHT + MARGIN) * ROW_COUNT + MARGIN
-SCREEN_TITLE = "Brute Force"
+SCREEN_TITLE = "Game"
 
 
 class Node:
@@ -40,15 +41,28 @@ class Node:
         self.moves = moves
         self.win = 0
         self.parent = None
+        self.cells_left = COLUMN_COUNT * (ROW_COUNT - 2) - (len(self.border_cells) + len(self.colored_cells))
+        self.heuristic_and_cost = (MOVES - moves) + self.cells_left
 
     def __str__(self) -> str:
-        #return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
-        return f" color: {get_color(self.color)} -> {self.children}"
+        # return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
+        return f"h(c): {self.heuristic_and_cost}, color: {get_color(self.color)} -> {self.children} "
 
     def __repr__(self) -> str:
-        return f" color: {get_color(self.color)} -> {self.children}"
+        return f"h(c): {self.heuristic_and_cost}, color: {get_color(self.color)} -> {self.children} "
+
     def __getitem__(self, key):
         return getattr(self, key)
+
+    def __gt__(self, other):
+        if self.heuristic_and_cost == other.heuristic_and_cost:
+            return self.cells_left.__gt__(other.cells_left)
+        return self.heuristic_and_cost.__gt__(other.heuristic_and_cost)
+
+    def __lt__(self, other):
+        if self.heuristic_and_cost == other.heuristic_and_cost:
+            return self.cells_left.__lt__(other.cells_left)
+        return self.heuristic_and_cost.__lt__(other.heuristic_and_cost)
 
 
 def get_decision_tree(game: MyGame):
@@ -144,14 +158,7 @@ def BFS_alg(tree: Node, game: MyGame):
                     node.children.append(child)
                     bfs_queue.append(child)
                     if len(child.border_cells) + len(child.colored_cells) == COLUMN_COUNT * (ROW_COUNT - 2):
-                        child.win = 1
-                        aux_node = child
-                        while aux_node.parent is not None:
-                            aux_node_child = copy.deepcopy(aux_node)
-                            aux_node = copy.deepcopy(aux_node.parent)
-                            aux_node.win = 1
-                            aux_node.children = [aux_node_child]
-                        return aux_node
+                        return get_solution(child)
     return None
 
 
@@ -167,7 +174,7 @@ def greedy_rec(node: Node, game: MyGame):
         if color != node.color:
             child = get_child(node, color, game)
             children_array.append(child)
-    children_array.sort(key=operator.itemgetter('cells_to_paint'), reverse=True)
+    children_array.sort(key=operator.itemgetter('cells_left'))
 
     for child in children_array:
         if node.win == 0:
@@ -183,15 +190,44 @@ def greedy_rec(node: Node, game: MyGame):
                     node.children.append(child)
                     return 1
 
-                
 
-def get_child(node: Node, color: int, game: MyGame):
-    child_color = color
-    cells_to_paint = game.get_related_cells(copy.deepcopy(node.border_cells), color, node.grid,
-                                            copy.deepcopy(node.border_cells))
-    child_cells_to_paint = len(cells_to_paint)
-    child_grid = copy.deepcopy(node.grid)
-    child_moves = node.moves - 1
+def a(game: MyGame):
+    tree = Node(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(), MOVES, 0)
+    frontier_nodes = [tree]
+    return a_rec(game, frontier_nodes)
+
+
+def a_rec(game: MyGame, frontier: []):
+    if len(frontier) == 0:
+        return None
+
+    #frontier.sort(key=operator.itemgetter('heuristic_and_cost'))
+    print(f"Start Frontier: {frontier}")
+    node = frontier.pop(0)
+    print(f"Lower node: {node}")
+    print(f"End Frontier: {frontier}")
+
+    if len(node.border_cells) + len(node.colored_cells) == COLUMN_COUNT * (ROW_COUNT - 2):
+        return get_solution(node)
+    if node.moves > 0:
+        for color in range(6):
+            if color != node.color:
+                child = get_child(node, color, game)
+                child.parent = node
+                bisect.insort(frontier, child)
+    return a_rec(game, frontier)
+
+
+def get_solution(node: Node):
+    node.win = 1
+    aux_node = node
+    while aux_node.parent is not None:
+        aux_node_child = copy.deepcopy(aux_node)
+        aux_node = copy.deepcopy(aux_node.parent)
+        aux_node.win = 1
+        aux_node.children = [aux_node_child]
+    return aux_node
+
 
 def get_color(number):
     colors = ["PINK", "WHITE", "RED", "GREEN", "BLUE", "YELLOW"]
@@ -202,7 +238,7 @@ def main():
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, MOVES, None)
     g = copy.deepcopy(game.grid)
 
-    tree = greedy(game)
+    tree = a(game)
     # tree = get_decision_tree(game)
     print(tree)
     # open text file

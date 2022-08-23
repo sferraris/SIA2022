@@ -1,9 +1,11 @@
+import copy
+
 import arcade
 import random
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 6
-COLUMN_COUNT = 6
+ROW_COUNT = 2 + 2
+COLUMN_COUNT = 2
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
@@ -90,18 +92,8 @@ class MyGame(arcade.Window):
             for column in range(COLUMN_COUNT):
                 # Figure out what color to draw the box [arcade.color.PINK, arcade.color.WHITE, arcade.color.RED,
                 # arcade.color.GREEN, arcade.color.BLUE, arcade.color.BLACK]
-                if self.grid[row][column] == 0:
-                    color = arcade.color.PINK
-                elif self.grid[row][column] == 1:
-                    color = arcade.color.WHITE
-                elif self.grid[row][column] == 2:
-                    color = arcade.color.RED
-                elif self.grid[row][column] == 3:
-                    color = arcade.color.GREEN
-                elif self.grid[row][column] == 4:
-                    color = arcade.color.BLUE
-                elif self.grid[row][column] == 5:
-                    color = arcade.color.YELLOW
+                if self.grid[row][column] < 6:
+                    color = self.colors[self.grid[row][column]]
                 else:
                     color = arcade.color.GRAY
 
@@ -164,7 +156,7 @@ class MyGame(arcade.Window):
 
     def get_related_cells(self, cells, color, grid, border_cells):
         initial_colored_cells = []
-        colored_cells_aux = cells.copy()
+        colored_cells_aux = copy.deepcopy(cells)
 
         while len(colored_cells_aux) > 0:
             cell = colored_cells_aux.pop()
@@ -176,7 +168,7 @@ class MyGame(arcade.Window):
                         and [row + step[0], column + step[1]] not in initial_colored_cells \
                         and [row + step[0], column + step[1]] not in cells:
                     colored_cells_aux.append([row + step[0], column + step[1]])
-            if cell not in border_cells:
+            if cell not in border_cells and cell not in initial_colored_cells:
                 initial_colored_cells.append(cell)
 
         return initial_colored_cells
