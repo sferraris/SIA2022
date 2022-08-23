@@ -2,8 +2,8 @@ import arcade
 import random
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 4
-COLUMN_COUNT = 4
+ROW_COUNT = 2 + 2
+COLUMN_COUNT = 2
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
@@ -40,7 +40,6 @@ class MyGame(arcade.Window):
 
         super().__init__(width, height, title)
 
-
         # Create a 2 dimensional array. A two-dimensional
         # array is simply a list of lists.
         self.colored_cells = []
@@ -59,7 +58,6 @@ class MyGame(arcade.Window):
             self.grid = grid
         self.current_color = self.grid[ROW_COUNT - 3][0]
         self.get_initial_info()
-
 
     def set_grid(self):
         for row in range(ROW_COUNT):
@@ -155,7 +153,8 @@ class MyGame(arcade.Window):
     def get_initial_info(self):
         row = ROW_COUNT - 3
         column = 0
-        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid, self.border_cells)
+        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid,
+                                                       self.border_cells)
 
         for cell in initial_colored_cells:
             if self.is_border(cell[0], cell[1], self.grid.copy()):
