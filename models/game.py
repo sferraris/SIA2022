@@ -5,15 +5,15 @@ import anytree
 from anytree import AnyNode, RenderTree
 
 # Set how many rows and columns we will have
-ROW_COUNT = 2 + 4
-COLUMN_COUNT = 4
+ROW_COUNT = 2 + 2
+COLUMN_COUNT = 2
 
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
 HEIGHT = 32
 
 # Set how many moves does the user have
-MOVES = 8
+MOVES = 2
 
 COLORS = 6
 
@@ -37,6 +37,7 @@ class Node:
         self.children = []
         self.moves = moves
         self.win = 0
+        self.parent = None
 
     def __str__(self) -> str:
         return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
@@ -57,100 +58,118 @@ def get_decision_tree_rec(node: Node, game: MyGame):
         return 1
     for color in range(6):
         if color != node.color:
-            child_color = color
-            cells_to_paint = game.get_related_cells(copy.deepcopy(node.border_cells), color, node.grid, copy.deepcopy(node.border_cells))
-            child_cells_to_paint = len(cells_to_paint)
-            child_grid = copy.deepcopy(node.grid)
-            child_moves = node.moves - 1
-
-            painted = copy.deepcopy(node.colored_cells) + copy.deepcopy(node.border_cells)
-            for cell in painted:
-                r = cell[0]
-                c = cell[1]
-                child_grid[r][c] = color
-
-            child_colored_cells = copy.deepcopy(node.colored_cells)
-            child_border_cells = copy.deepcopy(node.border_cells) + cells_to_paint
-
-            for cell in child_border_cells:
-                if not game.is_border(cell[0], cell[1], child_grid):
-                    child_border_cells.remove(cell)
-                    child_colored_cells.append(cell)
-
-            child = Node(child_color, child_colored_cells, child_border_cells, child_grid, child_moves, child_cells_to_paint)
+            child = get_child(node, color, game)
             node.children.append(child)
 
-            if child_moves == 0 and len(child_border_cells) + len(child_colored_cells) == COLUMN_COUNT * (ROW_COUNT - 2):
+            if child.moves == 0 and len(child.border_cells) + len(child.colored_cells) == COLUMN_COUNT * (
+                    ROW_COUNT - 2):
                 node.win = 1
                 child.win = 1
-            elif child_moves > 0:
+            elif child.moves > 0:
                 return_value = get_decision_tree_rec(child, game)
                 if return_value == 1:
                     node.win = 1
     return node.win
 
 
+def get_child(node: Node, color: int, game: MyGame):
+    child_color = color
+    cells_to_paint = game.get_related_cells(copy.deepcopy(node.border_cells), color, node.grid,
+                                            copy.deepcopy(node.border_cells))
+    child_cells_to_paint = len(cells_to_paint)
+    child_grid = copy.deepcopy(node.grid)
+    child_moves = node.moves - 1
 
-def print_tree(node: Node):
-    print("holis")
-    string = '{ Node: {'
-    string += 'color: '
-    string += get_color(node.color)
-   # string += ', cells_to_paint: '
-   # string += str(node.cells_to_paint)
-    string +=', moves: '
-    string += str(node.moves)
-    string += ', win: '
-    string += str(node.win)
-  #  string += ', total_cells_painted: '
-  #  string += str(len(node.border_cells) + len(node.colored_cells))
-    string += print_tree_rec(node)
-    string += '} }'
-    return string
+    painted = copy.deepcopy(node.colored_cells) + copy.deepcopy(node.border_cells)
+    for cell in painted:
+        r = cell[0]
+        c = cell[1]
+        child_grid[r][c] = color
+
+    child_colored_cells = copy.deepcopy(node.colored_cells)
+    child_border_cells = copy.deepcopy(node.border_cells) + cells_to_paint
+
+    for cell in child_border_cells:
+        if not game.is_border(cell[0], cell[1], child_grid):
+            child_border_cells.remove(cell)
+            child_colored_cells.append(cell)
+
+    child = Node(child_color, child_colored_cells, child_border_cells, child_grid, child_moves, child_cells_to_paint)
+    return copy.deepcopy(child)
+
+
+def DFS(game: MyGame):
+    tree = Node(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(), MOVES, 0)
+    DFS_rec(tree, game)
+    return tree
+
+
+def DFS_rec(node: Node, game: MyGame):
+    for color in range(6):
+        if color != node.color and node.win == 0:
+            child = get_child(node, color, game)
+            if len(child.border_cells) + len(child.colored_cells) == COLUMN_COUNT * (ROW_COUNT - 2):
+                child.win = 1
+                node.win = 1
+                node.children.append(child)
+                return 1
+            elif child.moves > 0:
+                return_value = DFS_rec(child, game)
+                if return_value == 1:
+                    node.win = 1
+                    node.children.append(child)
+                    return 1
+
+
+def BFS(game: MyGame):
+    tree = Node(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(), MOVES, 0)
+    return BFS_alg(tree, game)
+
+
+def BFS_alg(tree: Node, game: MyGame):
+    bfs_queue = [tree]
+    while bfs_queue:
+        node = bfs_queue.pop(0)
+        node.win = 1
+        #print(f"Color: {get_color(node.color)}, Moves: {node.moves}")
+        if node.moves > 0:
+            for color in range(6):
+                if color != node.color:
+                    child = get_child(node, color, game)
+                    child.parent = node
+                    node.children.append(child)
+                    bfs_queue.append(child)
+                    if len(child.border_cells) + len(child.colored_cells) == COLUMN_COUNT * (ROW_COUNT - 2):
+                        child.win = 1
+                        aux_node = child
+                        while aux_node.parent is not None:
+                            aux_node_child = copy.deepcopy(aux_node)
+                            aux_node = copy.deepcopy(aux_node.parent)
+                            aux_node.win = 1
+                            aux_node.children = [aux_node_child]
+                        return aux_node
+    return None
+
 
 def get_color(number):
-    colors = ["PINK", "WHITE", "RED", "GREEN", "BLUE",
-                   "YELLOW"]
+    colors = ["PINK", "WHITE", "RED", "GREEN", "BLUE", "YELLOW"]
     return colors[number]
-
-
-def print_tree_rec(node: Node):
-    aux = ', children: ['
-    if len(node.children) > 0:
-        for child in node.children:
-            aux += '{ Node: {'
-            aux += 'color: '
-            aux += get_color(node.color)
-          #  aux += ', cells_to_paint: '
-          #  aux += str(child.cells_to_paint)
-            aux += ', moves: '
-            aux += str(child.moves)
-            aux += ', win: '
-            aux += str(node.win)
-          #  aux += ', total_cells_painted: '
-          #  aux += str(len(child.border_cells) + len(child.colored_cells))
-            aux += print_tree_rec(child)
-            aux += '} },'
-    aux += ']'
-    return aux
 
 def main():
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, MOVES, None)
     g = copy.deepcopy(game.grid)
 
-    tree = get_decision_tree(game)
-   # print(tree)
+    tree = DFS(game)
+    #tree = get_decision_tree(game)
+    print(tree)
     # open text file
-    text_file = open("./data.json", "w")
+    #text_file = open("./data.json", "w")
 
     # write string to file
-    text_file.write(tree.__str__())
+    #text_file.write(tree.__str__())
 
     # close file
-    text_file.close()
-
-
-
+    #text_file.close()
 
     arcade.close_window()
     game = MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, MOVES, g)
