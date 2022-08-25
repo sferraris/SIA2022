@@ -3,10 +3,6 @@ import copy
 import arcade
 import random
 
-# Set how many rows and columns we will have
-ROW_COUNT = 2 + 2
-COLUMN_COUNT = 2
-
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH = 30
 HEIGHT = 32
@@ -18,16 +14,7 @@ MOVES = 1000
 # and on the edges of the screen.
 MARGIN = 1
 
-# Do the math to figure out our screen dimensions
-SCREEN_WIDTH = (WIDTH + MARGIN) * COLUMN_COUNT + MARGIN
-SCREEN_HEIGHT = (HEIGHT + MARGIN) * ROW_COUNT + MARGIN
-SCREEN_TITLE = "Array Backed Grid Example"
-
-
-def is_valid(row, column):
-    if row < 0 or row > ROW_COUNT - 3 or column < 0 or column >= COLUMN_COUNT:
-        return False
-    return True
+TOTAL_COLORS = 25
 
 
 class MyGame(arcade.Window):
@@ -35,7 +22,7 @@ class MyGame(arcade.Window):
     Main application class.
     """
 
-    def __init__(self, width, height, title, moves, grid):
+    def __init__(self, width, height, title, moves, grid, matrix_size, header_count, color_count, heuristic, algorythm):
         """
         Set up the application.
         """
@@ -49,33 +36,73 @@ class MyGame(arcade.Window):
         self.current_color = None
         self.moves = moves
 
+        self.matrix_size = matrix_size
+        self.header_count = header_count
+        self.color_count = color_count
+        self.heuristic = heuristic
+        self.algorythm = algorythm
+
+        self.real_size = self.matrix_size
+        if self.matrix_size < self.color_count:
+            self.real_size = self.color_count
+
         self.grid = []
-        self.colors = [arcade.color.PINK, arcade.color.WHITE, arcade.color.RED, arcade.color.GREEN, arcade.color.BLUE,
-                       arcade.color.YELLOW, arcade.color.GRAY]
+
+        self.colors = [
+            arcade.color.PINK,
+            arcade.color.WHITE,
+            arcade.color.RED,
+            arcade.color.GREEN,
+            arcade.color.BLUE,
+            arcade.color.YELLOW,
+            arcade.color.AERO_BLUE,
+            arcade.color.AFRICAN_VIOLET,
+            arcade.color.AIR_FORCE_BLUE,
+            arcade.color.ALLOY_ORANGE,
+            arcade.color.AMARANTH,
+            arcade.color.AMAZON,
+            arcade.color.AMBER,
+            arcade.color.ANDROID_GREEN,
+            arcade.color.ANTIQUE_BRASS,
+            arcade.color.ANTIQUE_BRONZE,
+            arcade.color.TAUPE,
+            arcade.color.AQUA,
+            arcade.color.LIGHT_SALMON,
+            arcade.color.ARSENIC,
+            arcade.color.ARTICHOKE,
+            arcade.color.ARYLIDE_YELLOW,
+            arcade.color.BABY_PINK,
+            arcade.color.BARBIE_PINK,
+            arcade.color.DARK_BROWN,
+            arcade.color.GRAY
+        ]
         self.steps = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 
         if grid is None:
             self.set_grid()
         else:
             self.grid = grid
-        self.current_color = self.grid[ROW_COUNT - 3][0]
+        self.current_color = self.grid[self.real_size - 1][0]
         self.get_initial_info()
 
     def set_grid(self):
-        for row in range(ROW_COUNT):
+        for row in range(self.real_size + self.header_count):
             # Add an empty array that will hold each cell
             # in this row
             self.grid.append([])
-            for column in range(COLUMN_COUNT):
-                if row == ROW_COUNT - 1:
-                    if column < 6:
+            for column in range(self.real_size):
+                if row == self.real_size + self.header_count - 1:
+                    if column < self.color_count:
                         self.grid[row].append(column)
                     else:
-                        self.grid[row].append(7)
-                elif row == ROW_COUNT - 2:
-                    self.grid[row].append(7)
+                        self.grid[row].append(TOTAL_COLORS)
+                elif row == self.real_size:
+                    self.grid[row].append(TOTAL_COLORS)
                 else:
-                    self.grid[row].append(random.randint(0, 5))  # Append a cell
+                    if column < self.matrix_size and self.real_size > row > self.real_size - self.matrix_size - 1:
+                        self.grid[row].append(random.randint(0, self.color_count - 1))
+                    else:
+                        self.grid[row].append(TOTAL_COLORS)
 
         return self.grid
 
@@ -88,14 +115,11 @@ class MyGame(arcade.Window):
         self.clear()
 
         # Draw the grid
-        for row in range(ROW_COUNT):
-            for column in range(COLUMN_COUNT):
+        for row in range(self.real_size + self.header_count):
+            for column in range(self.real_size):
                 # Figure out what color to draw the box [arcade.color.PINK, arcade.color.WHITE, arcade.color.RED,
                 # arcade.color.GREEN, arcade.color.BLUE, arcade.color.BLACK]
-                if self.grid[row][column] < 6:
-                    color = self.colors[self.grid[row][column]]
-                else:
-                    color = arcade.color.GRAY
+                color = self.colors[self.grid[row][column]]
 
                 # Do the math to figure out where the box is
                 x = (MARGIN + WIDTH) * column + MARGIN + WIDTH // 2
@@ -116,7 +140,7 @@ class MyGame(arcade.Window):
         # Make sure we are on-grid. It is possible to click in the upper right
         # corner in the margin and go to a grid location that doesn't exist
         color = column
-        if row == ROW_COUNT - 1 and column < 6 and color != self.current_color and self.moves > 0:
+        if row == self.real_size + self.header_count - 1 and column < self.color_count and color != self.current_color and self.moves > 0:
             self.moves -= 1
             print(f"Moves Left {self.moves}")
             related_cells = self.get_related_cells(self.border_cells.copy(), color, self.grid, self.border_cells)
@@ -136,17 +160,17 @@ class MyGame(arcade.Window):
 
     def is_border(self, row, column, grid):
         for step in self.steps:
-            if is_valid(row + step[0], column + step[1]):
+            if self.is_valid(row + step[0], column + step[1]):
                 color = grid[row][column]
                 if color != grid[row + step[0]][column + step[1]]:
                     return True
         return False
 
     def get_initial_info(self):
-        row = ROW_COUNT - 3
+        row = self.real_size - 1
         column = 0
-        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid,
-                                                       self.border_cells)
+        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid,self.border_cells)
+        print(initial_colored_cells)
 
         for cell in initial_colored_cells:
             if self.is_border(cell[0], cell[1], self.grid.copy()):
@@ -163,7 +187,7 @@ class MyGame(arcade.Window):
             row = cell[0]
             column = cell[1]
             for step in self.steps:
-                if is_valid(row + step[0], column + step[1]) \
+                if self.is_valid(row + step[0], column + step[1]) \
                         and color == grid[row + step[0]][column + step[1]] \
                         and [row + step[0], column + step[1]] not in initial_colored_cells \
                         and [row + step[0], column + step[1]] not in cells:
@@ -172,3 +196,8 @@ class MyGame(arcade.Window):
                 initial_colored_cells.append(cell)
 
         return initial_colored_cells
+
+    def is_valid(self, row, column):
+        if row < self.real_size - self.matrix_size or row > self.real_size - 1 or column < 0 or column >= self.matrix_size:
+            return False
+        return True
