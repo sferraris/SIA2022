@@ -22,7 +22,7 @@ class MyGame(arcade.Window):
     Main application class.
     """
 
-    def __init__(self, width, height, title, moves, grid, matrix_size, header_count, color_count, heuristic, algorythm):
+    def __init__(self, width, height, title, moves, grid, matrix_size, header_count, color_count):
         """
         Set up the application.
         """
@@ -39,8 +39,6 @@ class MyGame(arcade.Window):
         self.matrix_size = matrix_size
         self.header_count = header_count
         self.color_count = color_count
-        self.heuristic = heuristic
-        self.algorythm = algorythm
 
         self.real_size = self.matrix_size
         if self.matrix_size < self.color_count:
@@ -170,7 +168,6 @@ class MyGame(arcade.Window):
         row = self.real_size - 1
         column = 0
         initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid,self.border_cells)
-        print(initial_colored_cells)
 
         for cell in initial_colored_cells:
             if self.is_border(cell[0], cell[1], self.grid.copy()):
