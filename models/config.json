@@ -1,7 +1,7 @@
 {
-  "matrix_size": 2,
+  "matrix_size": 6,
   "color_number": 6,
-  "moves": 6,
-  "heuristic": "cells_remaining",
+  "moves": 15,
+  "heuristic": "cells_left",
   "algorythm": "local_greedy"
 }
