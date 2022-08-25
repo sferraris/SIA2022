@@ -1,7 +1,7 @@
 {
-  "matrix_size": 6,
+  "matrix_size": 4,
   "color_number": 6,
   "moves": 15,
   "heuristic": "cells_left",
-  "algorythm": "local_greedy"
+  "algorythm": "DFS"
 }
