@@ -1,4 +1,5 @@
 import operator
+import time
 import bisect
 
 from grid import MyGame
@@ -137,7 +138,7 @@ def get_child(node: Node, color: int, game: MyGame, total_moves: int, matrix_siz
 
 def DFS(game: MyGame, color_number: int, total_moves: int, matrix_size: int):
     tree_state = State(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(),
-                       total_moves, 0, 0, 0)
+                       0, 0, 0, 0)
     tree = Node(tree_state)
     visited = set()
     DFS_rec(tree, game, color_number, total_moves, matrix_size, copy.deepcopy(visited))
@@ -166,7 +167,7 @@ def DFS_rec(node: Node, game: MyGame, color_number: int, total_moves: int, matri
 
 def BFS(game: MyGame, color_number: int, total_moves: int, matrix_size: int):
     tree_state = State(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(),
-                       total_moves, 0, 0, 0)
+                       0, 0, 0, 0)
     visited = set()
     tree = Node(tree_state)
     return BFS_alg(tree, game, color_number, total_moves, matrix_size, copy.deepcopy(visited))
@@ -191,16 +192,17 @@ def BFS_alg(tree: Node, game: MyGame, color_number: int, total_moves: int, matri
     return None
 
 
-def greedy(game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int):
+def local_greedy(game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int):
     tree_state = State(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(),
-                       total_moves, 0, 0, 0)
+                       0, 0, 0, 0)
     visited = set()
     tree = Node(tree_state)
-    greedy_rec(tree, game, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
+    local_greedy_rec(tree, game, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
     return tree
 
 
-def greedy_rec(node: Node, game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int, visited: set):
+def local_greedy_rec(node: Node, game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int,
+                     visited: set):
     visited.add(node.state.__hash__())
     children_array = []
     for color in range(color_number):
@@ -217,16 +219,46 @@ def greedy_rec(node: Node, game: MyGame, color_number: int, heuristic, total_mov
                 node.children.append(child)
                 return 1
             elif total_moves == -1 or child.state.moves < total_moves:
-                return_value = greedy_rec(child, game, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
+                return_value = local_greedy_rec(child, game, color_number, heuristic, total_moves, matrix_size,
+                                                copy.deepcopy(visited))
                 if return_value == 1:
                     node.state.win = 1
                     node.children.append(child)
                     return 1
 
 
+def global_greedy(game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int):
+    tree_state = State(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(),
+                       0, 0, 0, 0)
+    visited = set()
+    tree = Node(tree_state)
+    frontier_nodes = [tree]
+    return global_greedy_rec(game, frontier_nodes, color_number, heuristic, total_moves, matrix_size,
+                             copy.deepcopy(visited))
+
+
+def global_greedy_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves: int, matrix_size: int, visited: set):
+    if len(frontier) == 0:
+        return None
+
+    node = frontier.pop(0)
+    visited.add(node.state.__hash__())
+
+    if len(node.state.border_cells) + len(node.state.colored_cells) == matrix_size * matrix_size:
+        return get_solution(node)
+    if total_moves == -1 or node.state.moves < total_moves:
+        for color in range(color_number):
+            if color != node.state.color:
+                child = get_child(node, color, game, total_moves, matrix_size, heuristic)
+                child.parent = node
+                if not visited.__contains__(child.state.__hash__()):
+                    bisect.insort(frontier, child)
+    return global_greedy_rec(game, frontier, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
+
+
 def a(game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int):
     tree_state = State(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(),
-                       total_moves, 0, 0, 0)
+                       0, 0, 0, 0)
     visited = set()
     tree = Node(tree_state)
     frontier_nodes = [tree]
@@ -320,20 +352,39 @@ def main():
 
     game = MyGame(screen_width, screen_height, SCREEN_TITLE, total_moves, None, matrix_size, HEADER_COUNT, color_number)
     g = copy.deepcopy(game.grid)
-
+    g2 = copy.deepcopy(game.grid)
+    start_time = time.time()
     tree = {}
     if algorythm == "DFS":
         tree = DFS(game, color_number, total_moves, matrix_size)
     elif algorythm == "BFS":
         tree = BFS(game, color_number, total_moves, matrix_size)
     elif algorythm == "local_greedy":
-        tree = greedy(game, color_number, heuristic, total_moves, matrix_size)
+        tree = local_greedy(game, color_number, heuristic, total_moves, matrix_size)
     elif algorythm == "global_greedy":
-        tree = greedy(game, color_number, heuristic, total_moves, matrix_size)
+        tree = global_greedy(game, color_number, heuristic, total_moves, matrix_size)
     elif algorythm == "a*":
         tree = a(game, color_number, heuristic, total_moves, matrix_size)
-
     print(tree)
+    print("--- %s seconds ---" % (time.time() - start_time))
+    arcade.close_window()
+    game = MyGame(screen_width, screen_height, SCREEN_TITLE, -1, g, matrix_size, HEADER_COUNT, color_number)
+
+    start_time2 = time.time()
+    tree2 = {}
+    if algorythm == "DFS":
+        tree2 = DFS(game, color_number, -1, matrix_size)
+    elif algorythm == "BFS":
+        tree2 = BFS(game, color_number, -1, matrix_size)
+    elif algorythm == "local_greedy":
+        tree2 = local_greedy(game, color_number, heuristic, -1, matrix_size)
+    elif algorythm == "global_greedy":
+        tree2 = global_greedy(game, color_number, heuristic, -1, matrix_size)
+    elif algorythm == "a*":
+        tree2 = a(game, color_number, heuristic, -1, matrix_size)
+
+    print(tree2)
+    print("--- %s seconds ---" % (time.time() - start_time2))
     # open text file
     # text_file = open("./data.json", "w")
 
@@ -344,7 +395,7 @@ def main():
     # text_file.close()
 
     arcade.close_window()
-    game = MyGame(screen_width, screen_height, SCREEN_TITLE, total_moves, g, matrix_size, HEADER_COUNT, color_number)
+    game = MyGame(screen_width, screen_height, SCREEN_TITLE, total_moves, g2, matrix_size, HEADER_COUNT, color_number)
     arcade.run()
 
 
