@@ -51,10 +51,10 @@ class Node:
 
     def __str__(self) -> str:
         # return "{" + f" color: {get_color(self.color)},moves: {self.moves},  win: {self.win}, total_cells: {len(self.border_cells) + len(self.colored_cells)}, children: {self.children} " + "}"
-        return f"{get_color(self.state.color)}, {self.state.__hash__()} -> {self.children} "
+        return f"{get_color(self.state.color)} -> {self.children} "
 
     def __repr__(self) -> str:
-        return f"{get_color(self.state.color)}, {self.state.__hash__()} -> {self.children} "
+        return f"{get_color(self.state.color)} -> {self.children} "
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -103,7 +103,7 @@ def get_child(node: Node, color: int, game: MyGame, total_moves: int, matrix_siz
                                             copy.deepcopy(node.state.border_cells))
     child_cells_to_paint = len(cells_to_paint)
     child_grid = copy.deepcopy(node.state.grid)
-    child_moves = node.state.moves - 1
+    child_moves = node.state.moves + 1
 
     painted = copy.deepcopy(node.state.colored_cells) + copy.deepcopy(node.state.border_cells)
     for cell in painted:
@@ -125,7 +125,7 @@ def get_child(node: Node, color: int, game: MyGame, total_moves: int, matrix_siz
     if heuristic is not None:
         if heuristic == "cells_left_cost":
             child_heuristic = matrix_size * matrix_size - (len(child_border_cells) + len(child_colored_cells))
-            child_cost = total_moves - child_moves
+            child_cost = child_moves
         if heuristic == "cells_left":
             child_heuristic = matrix_size * matrix_size - (len(child_border_cells) + len(child_colored_cells))
 
@@ -156,7 +156,7 @@ def DFS_rec(node: Node, game: MyGame, color_number: int, total_moves: int, matri
                     visited.add(child.state)
                     node.children.append(child)
                     return 1
-                elif child.state.moves > 0:
+                elif total_moves == -1 or child.state.moves < total_moves:
                     return_value = DFS_rec(child, game, color_number, total_moves, matrix_size, copy.deepcopy(visited))
                     if return_value == 1:
                         node.state.win = 1
@@ -178,7 +178,7 @@ def BFS_alg(tree: Node, game: MyGame, color_number: int, total_moves: int, matri
         node = bfs_queue.pop(0)
         visited.add(node.state.__hash__())
         node.state.win = 1
-        if node.state.moves > 0:
+        if total_moves == -1 or node.state.moves < total_moves:
             for color in range(color_number):
                 if color != node.state.color:
                     child = get_child(node, color, game, total_moves, matrix_size, None)
@@ -216,7 +216,7 @@ def greedy_rec(node: Node, game: MyGame, color_number: int, heuristic, total_mov
                 node.state.win = 1
                 node.children.append(child)
                 return 1
-            elif child.state.moves > 0:
+            elif total_moves == -1 or child.state.moves < total_moves:
                 return_value = greedy_rec(child, game, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
                 if return_value == 1:
                     node.state.win = 1
@@ -245,7 +245,7 @@ def a_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves:
 
     if len(node.state.border_cells) + len(node.state.colored_cells) == matrix_size * matrix_size:
         return get_solution(node)
-    if node.state.moves > 0:
+    if total_moves == -1 or node.state.moves < total_moves:
         for color in range(color_number):
             if color != node.state.color:
                 child = get_child(node, color, game, total_moves, matrix_size, heuristic + "_cost")

@@ -34,7 +34,8 @@ class MyGame(arcade.Window):
         self.colored_cells = []
         self.border_cells = []
         self.current_color = None
-        self.moves = moves
+        self.total_moves = moves
+        self.moves = 0
 
         self.matrix_size = matrix_size
         self.header_count = header_count
@@ -138,9 +139,9 @@ class MyGame(arcade.Window):
         # Make sure we are on-grid. It is possible to click in the upper right
         # corner in the margin and go to a grid location that doesn't exist
         color = column
-        if row == self.real_size + self.header_count - 1 and column < self.color_count and color != self.current_color and self.moves > 0:
-            self.moves -= 1
-            print(f"Moves Left {self.moves}")
+        if row == self.real_size + self.header_count - 1 and column < self.color_count and color != self.current_color and (self.total_moves == -1 or self.moves < self.total_moves):
+            self.moves += 1
+            print(f"Move Nº{self.moves}")
             related_cells = self.get_related_cells(self.border_cells.copy(), color, self.grid, self.border_cells)
             cells_to_paint = self.colored_cells + self.border_cells
             for cell in cells_to_paint:
