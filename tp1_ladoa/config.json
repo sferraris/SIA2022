@@ -1,0 +1,7 @@
+{
+  "matrix_size": 10,
+  "color_number": 6,
+  "moves": 20,
+  "heuristic": "cells_left",
+  "algorythm": "a*"
+}

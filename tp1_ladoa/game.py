@@ -368,23 +368,23 @@ def main():
     print(tree)
     print("--- %s seconds ---" % (time.time() - start_time))
     arcade.close_window()
-    game = MyGame(screen_width, screen_height, SCREEN_TITLE, -1, g, matrix_size, HEADER_COUNT, color_number)
-
-    start_time2 = time.time()
-    tree2 = {}
-    if algorythm == "DFS":
-        tree2 = DFS(game, color_number, -1, matrix_size)
-    elif algorythm == "BFS":
-        tree2 = BFS(game, color_number, -1, matrix_size)
-    elif algorythm == "local_greedy":
-        tree2 = local_greedy(game, color_number, heuristic, -1, matrix_size)
-    elif algorythm == "global_greedy":
-        tree2 = global_greedy(game, color_number, heuristic, -1, matrix_size)
-    elif algorythm == "a*":
-        tree2 = a(game, color_number, heuristic, -1, matrix_size)
-
-    print(tree2)
-    print("--- %s seconds ---" % (time.time() - start_time2))
+    #game = MyGame(screen_width, screen_height, SCREEN_TITLE, -1, g, matrix_size, HEADER_COUNT, color_number)
+    #
+    #start_time2 = time.time()
+    #tree2 = {}
+    #if algorythm == "DFS":
+    #    tree2 = DFS(game, color_number, -1, matrix_size)
+    #elif algorythm == "BFS":
+    #    tree2 = BFS(game, color_number, -1, matrix_size)
+    #elif algorythm == "local_greedy":
+    #    tree2 = local_greedy(game, color_number, heuristic, -1, matrix_size)
+    #elif algorythm == "global_greedy":
+    #    tree2 = global_greedy(game, color_number, heuristic, -1, matrix_size)
+    #elif algorythm == "a*":
+    #    tree2 = a(game, color_number, heuristic, -1, matrix_size)
+    #
+    #print(tree2)
+    #print("--- %s seconds ---" % (time.time() - start_time2))
     # open text file
     # text_file = open("./data.json", "w")
 

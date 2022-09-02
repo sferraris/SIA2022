@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 .idea/
-models/data.json
+tp1_ladoa/data.json

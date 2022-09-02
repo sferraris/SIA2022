@@ -1,7 +1,0 @@
-{
-  "matrix_size": 5,
-  "color_number": 6,
-  "moves": 15,
-  "heuristic": "cells_left",
-  "algorythm": "BFS"
-}
