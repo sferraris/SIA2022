@@ -1,5 +1,7 @@
 {
   "target_color": [120, 230, 17],
   "population_length": 20,
-  "K": 10
+  "K": 10,
+  "mutation_probability": 10,
+  "mutation_delta": 2
 }
