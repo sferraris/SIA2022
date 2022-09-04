@@ -3,5 +3,6 @@
   "population_length": 20,
   "K": 10,
   "mutation_probability": 10,
-  "mutation_delta": 2
+  "mutation_delta": 1,
+  "selection_method": "deterministic_tournament"
 }

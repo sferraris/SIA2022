@@ -35,7 +35,7 @@ def calculate_fitness(target_color: Color, color: Color):
     color.fitness = fitness_res
 
 
-def elite_selection_mode(color_array: [], k: int):
+def elite_selection_method(color_array: [], k: int):
     # receives a sorted_by_fitness color array
     selected_colors = []
     n = len(color_array)
@@ -52,6 +52,45 @@ def elite_selection_mode(color_array: [], k: int):
             used_colors += color.uses
             selected_colors.append(color)
             return selected_colors
+
+    return selected_colors
+
+
+def random_selection_method(color_array: [], k: int):
+    used = []
+    selected_colors = []
+    if k >= len(color_array):
+        return copy.deepcopy(color_array)
+
+    for i in range(k):
+        rand = random.randint(0, len(color_array) - 1)
+        while used.__contains__(rand):
+            rand = random.randint(0, len(color_array) - 1)
+        used.append(rand)
+        color = copy.deepcopy(color_array[rand])
+        color.uses = 1
+        selected_colors.append(color)
+
+    return selected_colors
+
+
+def deterministic_tournament_selection_method(color_array: [], k: int, m: int):
+    if m > len(color_array):
+       m = len(color_array)
+    selected_colors = []
+
+    for j in range(k):
+        used = []
+        aux_colors = []
+        for i in range(m):
+            rand = random.randint(0, len(color_array) - 1)
+            while used.__contains__(rand) and selected_colors.__contains__(color_array[rand]):
+                rand = random.randint(0, len(color_array) - 1)
+            used.append(rand)
+            color = copy.deepcopy(color_array[rand])
+            color.uses = 1
+            bisect.insort(aux_colors, color)
+        selected_colors.append(aux_colors[0])
 
     return selected_colors
 
@@ -118,10 +157,31 @@ def print_color_palette(colors: []):
         print(color)
 
 
-def mutation(color: Color, mutation_probability, mutation_delta):
-    color.rgb[0] += get_mutation_delta(mutation_probability, mutation_delta)
-    color.rgb[1] += get_mutation_delta(mutation_probability, mutation_delta)
-    color.rgb[2] += get_mutation_delta(mutation_probability, mutation_delta)
+def uniform_mutation(color: Color, mutation_probability, mutation_delta):
+    color.rgb[0] = get_mutated_color(color.rgb[0], get_mutation_delta(mutation_probability, mutation_delta))
+    color.rgb[1] = get_mutated_color(color.rgb[1], get_mutation_delta(mutation_probability, mutation_delta))
+    color.rgb[2] = get_mutated_color(color.rgb[2], get_mutation_delta(mutation_probability, mutation_delta))
+
+
+def gen_mutation(color: Color, mutation_probability, mutation_delta):
+    rand = random.randint(0, 2)
+    color.rgb[rand] = get_mutated_color(color.rgb[rand], get_mutation_delta(mutation_probability, mutation_delta))
+
+
+def multi_gen_limited_mutation(color: Color, mutation_probability, mutation_delta):
+    if is_mutation_delta(mutation_probability):
+        quantity = random.randint(1, 3)
+        start = random.randint(0, 2)
+        for i in range(quantity):
+            pos = (start + i) % 3
+            color.rgb[pos] = get_mutated_color(color.rgb[pos], get_mutation_delta(101, mutation_delta))
+
+
+def complete_mutation(color: Color, mutation_probability, mutation_delta):
+    if is_mutation_delta(mutation_probability):
+        color.rgb[0] = get_mutated_color(color.rgb[0], get_mutation_delta(101, mutation_delta))
+        color.rgb[1] = get_mutated_color(color.rgb[1], get_mutation_delta(101, mutation_delta))
+        color.rgb[2] = get_mutated_color(color.rgb[2], get_mutation_delta(101, mutation_delta))
 
 
 def get_mutation_delta(mutation_probability, mutation_delta):
@@ -131,58 +191,48 @@ def get_mutation_delta(mutation_probability, mutation_delta):
     return 0
 
 
-def main():
-    config_file = open("config.json")
-    config_data = json.load(config_file)
+def get_mutated_color(color, delta):
+    if color + delta < 0:
+        return 0
+    if color + delta > 255:
+        return 255
+    return color + delta
 
-    target_color_data = config_data["target_color"]
-    population_length = config_data["population_length"]
-    K = config_data["K"]
-    mutation_probability = config_data["mutation_probability"]
-    mutation_delta = config_data["mutation_delta"]
 
-    target_color = Color(target_color_data[0], target_color_data[1], target_color_data[2])
-    current_color_gen = []
+def is_mutation_delta(mutation_probability):
+    mutation_decider = random.randint(0, 100)
+    if mutation_decider < mutation_probability:
+        return True
+    return False
 
-    for color_data in range(population_length):
-        r = random.randint(0, 255)
-        g = random.randint(0, 255)
-        b = random.randint(0, 255)
-        color = Color(r, g, b)
-        calculate_fitness(target_color, color)
-        bisect.insort(current_color_gen, color)
 
-    print_color_palette(current_color_gen)
-
-    # START TEST
-    best_r = 1000
-    best_g = 1000
-    best_b = 1000
-
-    for color in current_color_gen:
-        if abs(color.rgb[0] - target_color.rgb[0]) < abs(best_r - target_color.rgb[0]):
-            best_r = color.rgb[0]
-        if abs(color.rgb[1] - target_color.rgb[1]) < abs(best_g - target_color.rgb[1]):
-            best_g = color.rgb[1]
-        if abs(color.rgb[2] - target_color.rgb[2]) < abs(best_b - target_color.rgb[2]):
-            best_b = color.rgb[2]
-
-    testcolor = Color(best_r, best_g, best_b)
-    calculate_fitness(target_color, testcolor)
-
-    print(
-        f"Test Color: {testcolor}, fitness: {testcolor.fitness}")
-    # END TEST
-
-    # Para cada i, hay que hacer selection, crossover, mutation
-    for i in range(100):
+def run(target_color, mutation_probability, current_color_gen, mutation_delta, k, mutation, selection_method):
+    count = 0
+    while not current_color_gen[0].__eq__(target_color)\
+            and (count < 1000 or (mutation_probability != 0 and mutation_delta != 0)):
+        count += 1
+        #print(f"count: {count}, fitness: {current_color_gen[0].fitness}")
+        # print_color_palette(current_color_gen)
         # Parent selection
-        parent_colors = elite_selection_mode(current_color_gen, K)
+        parent_colors = []
+        if selection_method.__eq__("elite"):
+            parent_colors = elite_selection_method(current_color_gen, k)
+        if selection_method.__eq__("random"):
+            parent_colors = random_selection_method(current_color_gen, k)
+        if selection_method.__eq__("deterministic_tournament"):
+            parent_colors = deterministic_tournament_selection_method(current_color_gen, k, 3)
         # Crossover
         children_colors = get_children(copy.deepcopy(parent_colors))
         # Child mutation
         for child in children_colors:
-            mutation(child, mutation_probability, mutation_delta)
+            if mutation.__eq__("uniform"):
+                uniform_mutation(child, mutation_probability, mutation_delta)
+            if mutation.__eq__("gen"):
+                gen_mutation(child, mutation_probability, mutation_delta)
+            if mutation.__eq__("multi_gen_limited"):
+                multi_gen_limited_mutation(child, mutation_probability, mutation_delta)
+            if mutation.__eq__("complete"):
+                complete_mutation(child, mutation_probability, mutation_delta)
 
         # Fill-All implementation, cuando vuelve a entrar hace un elite selection
         current_color_gen = []
@@ -191,10 +241,113 @@ def main():
             if not current_color_gen.__contains__(color):
                 bisect.insort(current_color_gen, color)
 
-    print_color_palette(current_color_gen)
+    return current_color_gen, count
+def main():
+    config_file = open("config.json")
+    config_data = json.load(config_file)
+    mutations = ["uniform", "gen", "multi_gen_limited", "complete"]
+    selection_methods = ["elite", "random", "deterministic_tournament"]
 
-    print(
-        f"Selected Color: {current_color_gen[0]}, fitness: {current_color_gen[0].fitness}")
+    target_color_data = config_data["target_color"]
+    if len(target_color_data) != 3 or (not 0 <= target_color_data[0] < 256) or (not 0 <= target_color_data[1] < 256) or (not 0 <= target_color_data[2] < 256):
+        print("Target color data must be a size 3 array of integers between 0 and 255")
+        return
+    population_length = config_data["population_length"]
+    if population_length < 2:
+        print("Population length must be bigger than 2")
+        return
+    K = config_data["K"]
+    if K < 2:
+        print("K must be bigger than 2")
+        return
+    selection_method = config_data["selection_method"]
+    if not selection_methods.__contains__(selection_method):
+        print(f"Selection method must be one of the following: {selection_methods}")
+        return
+    mutation_type = config_data["mutation_type"]
+    if not mutations.__contains__(mutation_type):
+        print(f"Mutation type must be one of the following: {mutations}")
+        return
+    mutation_probability = config_data["mutation_probability"]
+    if not 0 <= mutation_probability <= 100:
+        print("Mutation probability must be an integer between 0 and 100")
+        return
+    mutation_delta = config_data["mutation_delta"]
+    if not 0 <= mutation_delta <= 25:
+        print("Mutation delta must be an integer between 0 and 25")
+        return 
+
+    mutation_cycles = [0, 0, 0, 0]
+
+    target_color = Color(target_color_data[0], target_color_data[1], target_color_data[2])
+    statistic_count = 20
+    for j in range(statistic_count):
+        print(j)
+        current_color_gen = []
+
+        for color_data in range(population_length):
+            r = random.randint(0, 255)
+            g = random.randint(0, 255)
+            b = random.randint(0, 255)
+            color = Color(r, g, b)
+            calculate_fitness(target_color, color)
+            bisect.insort(current_color_gen, color)
+
+        #print_color_palette(current_color_gen)
+
+        """
+        # START TEST
+        best_r = 1000
+        best_g = 1000
+        best_b = 1000
+    
+        for color in current_color_gen:
+            if abs(color.rgb[0] - target_color.rgb[0]) < abs(best_r - target_color.rgb[0]):
+                best_r = color.rgb[0]
+            if abs(color.rgb[1] - target_color.rgb[1]) < abs(best_g - target_color.rgb[1]):
+                best_g = color.rgb[1]
+            if abs(color.rgb[2] - target_color.rgb[2]) < abs(best_b - target_color.rgb[2]):
+                best_b = color.rgb[2]
+    
+        testcolor = Color(best_r, best_g, best_b)
+        calculate_fitness(target_color, testcolor)
+    
+        print(
+            f"Test Color: {testcolor}, fitness: {testcolor.fitness}")
+        # END TEST
+        """
+
+        # Para cada i, hay que hacer selection, crossover, mutation
+        for i in range(len(mutations)):
+            new_gen = copy.deepcopy(current_color_gen)
+            new_gen, count = run(target_color, mutation_probability, new_gen, mutation_delta, K, mutations[i], selection_method)
+            print(f"Selected Color: {new_gen[0]}, fitness: {new_gen[0].fitness}, cycles: {count}")
+            mutation_cycles[i] += count
+
+    print(f"uniform: {mutation_cycles[0]/statistic_count}, gen: {mutation_cycles[1]/statistic_count}, multi_gen_limited: {mutation_cycles[2]/statistic_count}, complete: {mutation_cycles[3]/statistic_count}")
+    """
+    while not current_color_gen[0].__eq__(target_color)\
+            and (count < 1000 or (mutation_probability != 0 and mutation_delta != 0)):
+        count += 1
+        # Parent selection
+        parent_colors = elite_selection_mode(current_color_gen, K)
+        # Crossover
+        children_colors = get_children(copy.deepcopy(parent_colors))
+        # Child mutation
+        for child in children_colors:
+            uniform_mutation(child, mutation_probability, mutation_delta)
+
+        # Fill-All implementation, cuando vuelve a entrar hace un elite selection
+        current_color_gen = []
+        for color in copy.deepcopy(parent_colors) + copy.deepcopy(children_colors):
+            calculate_fitness(target_color, color)
+            if not current_color_gen.__contains__(color):
+                bisect.insort(current_color_gen, color)
+
+    """
+    # print_color_palette(new_gen)
+
+    # print(f"Selected Color: {new_gen[0]}, fitness: {new_gen[0].fitness}, cycles: {count}")
 
 
 if __name__ == "__main__":
