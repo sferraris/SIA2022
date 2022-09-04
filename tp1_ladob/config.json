@@ -4,5 +4,9 @@
   "K": 10,
   "mutation_probability": 10,
   "mutation_delta": 1,
-  "selection_method": "deterministic_tournament"
+  "mutation_type": "complete",
+  "selection_method": "deterministic_tournament",
+  "mutation_statistics": false,
+  "selection_statistics": true,
+  "max_cycles": 1000
 }

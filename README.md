@@ -27,12 +27,10 @@ Heuristicas -> Costo --> 1 movimiento en todas las posibilidades
 >  - 2º G
 >  - 3º B
 
-- Estructura / Arquitectura ~ Genotipo --> listo<br/>
-- Población Inicial --> Listo <br/>
-- Función de adaptabilidad - fitness o aptitud <br/>
-- Método de selección de padres<br/>
-- Método de cruza<br/>
-- Método de mutación<br/>
-- Método de selección de nueva generación<br/>
-- Se pueden usar los mismos métodos de selección de padres<br/>
-- Condición de corte ( opcional )<br/>
+- Validar que pasa cuando los params son vacios --> Listo :)
+- Agregar los metodos de mutacion distintos a la config --> Listo :)
+- Agregar el metodo de estadistica --> Listo :)
+- Mejorar el readme 
+- Condición de corte ( opcional ) --> Listo :)
+- Hacer ej 1
+- Hacer presentacion
