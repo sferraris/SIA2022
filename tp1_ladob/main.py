@@ -28,39 +28,111 @@ class Color:
         return self.rgb.__eq__(other.rgb)
 
 
-def calculate_fitness(target_color: Color, color: Color):
+class ColorMix:
+    def __init__(self, proportions):
+        self.proportions = proportions
+        self.fitness = 0
+        self.uses = 0
+
+    def __gt__(self, other):
+        return self.fitness.__lt__(other.fitness)
+
+    def __lt__(self, other):
+        return self.fitness.__gt__(other.fitness)
+
+    def __eq__(self, other):
+        return self.proportions.__eq__(other.proportions)
+
+    def __str__(self):
+        return f"Proportions: {self.proportions}, Fitness: {self.fitness}, Uses: {self.uses}"
+
+    def __repr__(self):
+        return f"Proportions: {self.proportions}, Fitness: {self.fitness}, Uses: {self.uses}"
+
+
+def calculate_fitness(target_color: Color, color_mix: ColorMix, color_palette: []):
     fitness_res = 255 * 3
+    rgb = get_rgb_from_mix(color_mix, color_palette)
+
     for pos in range(3):
-        fitness_res -= abs(target_color.rgb[pos] - color.rgb[pos])
-    color.fitness = fitness_res
+        fitness_res -= abs(target_color.rgb[pos] - rgb[pos])
+    color_mix.fitness = fitness_res
 
 
-def elite_selection_method(color_array: [], k: int):
+def get_rgb_from_mix(color_mix: ColorMix, color_palette: []):
+    rgb = [0, 0, 0]
+    for pos in range(len(color_palette)):
+        rgb[0] += (color_mix.proportions[pos] / 100) * color_palette[pos].rgb[0]
+        rgb[1] += (color_mix.proportions[pos] / 100) * color_palette[pos].rgb[1]
+        rgb[2] += (color_mix.proportions[pos] / 100) * color_palette[pos].rgb[2]
+
+    red = round(rgb[0])
+    if red > 255:
+        red = 255
+
+    green = round(rgb[1])
+    if green > 255:
+        green = 255
+
+    blue = round(rgb[2])
+    if blue > 255:
+        blue = 255
+
+    return [red, green, blue]
+
+
+def contains(color_mix_array: [], color_mix: ColorMix, color_palette):
+    color_mix_rgb_array = []
+    for color_mix_aux in color_mix_array:
+        color_mix_rgb_array.append(get_rgb_from_mix(color_mix_aux, color_palette))
+    color_mix_rgb = get_rgb_from_mix(color_mix, color_palette)
+
+    return color_mix_rgb_array.__contains__(color_mix_rgb)
+
+
+def normalize_proportions(proportions: []):
+    res = []
+    proportion_sum = 0
+    for proportion in proportions:
+        proportion_sum += proportion
+
+    for i in range(len(proportions)):
+        res_value = proportions[i] * 100 / proportion_sum
+        res.append(res_value)
+
+    return res
+
+
+def elite_selection_method(color_mix_array: [], k: int):
     # receives a sorted_by_fitness color array
-    selected_colors = []
-    n = len(color_array)
+    selected_color_mix = []
+    n = len(color_mix_array)
     used_colors = 0
-    for pos in range(len(color_array)):
-        number_to_select = math.ceil((k - pos) / n)
-        color = copy.deepcopy(color_array[pos])
-        if used_colors + number_to_select <= k:
-            color.uses = number_to_select
-            used_colors += color.uses
-            selected_colors.append(color)
-        else:
-            color.uses = k - used_colors
-            used_colors += color.uses
-            selected_colors.append(color)
-            return selected_colors
+    for pos in range(len(color_mix_array)):
+        if used_colors < k:
+            number_to_select = math.ceil((k - pos) / n)
+            color = copy.deepcopy(color_mix_array[pos])
+            if used_colors + number_to_select <= k:
+                color.uses = number_to_select
+                used_colors += color.uses
+                selected_color_mix.append(color)
+            else:
+                color.uses = k - used_colors
+                used_colors += color.uses
+                selected_color_mix.append(color)
 
-    return selected_colors
+    return selected_color_mix
 
 
-def random_selection_method(color_array: [], k: int):
+def random_selection_method(color_array: [], k: int, color_palette):
     used = []
     selected_colors = []
     if k >= len(color_array):
-        return copy.deepcopy(color_array)
+        for color_mix in color_array:
+            color = copy.deepcopy(color_mix)
+            color.uses = 1
+            selected_colors.append(color)
+        return selected_colors
 
     for i in range(k):
         rand = random.randint(0, len(color_array) - 1)
@@ -78,36 +150,70 @@ def deterministic_tournament_selection_method(color_array: [], k: int, m: int):
     if m > len(color_array):
         m = len(color_array)
     selected_colors = []
+    selected_positions = []
+
+    if k >= len(color_array):
+        for color_mix in color_array:
+            color = copy.deepcopy(color_mix)
+            color.uses = 1
+            selected_colors.append(color)
+        return selected_colors
 
     for j in range(k):
         used = []
         aux_colors = []
         for i in range(m):
             rand = random.randint(0, len(color_array) - 1)
-            while used.__contains__(rand) and selected_colors.__contains__(color_array[rand]):
+            flag = False
+            while (used.__contains__(rand) or selected_positions.__contains__(rand)) and not flag:
+                if len(used) + len(selected_positions) == k:
+                    flag = True
                 rand = random.randint(0, len(color_array) - 1)
-            used.append(rand)
-            color = copy.deepcopy(color_array[rand])
-            color.uses = 1
-            bisect.insort(aux_colors, color)
-        selected_colors.append(aux_colors[0])
+            if not flag:
+                used.append(rand)
+                color = copy.deepcopy(color_array[rand])
+                color.uses = 1
+                aux_colors.append(color)
+
+        max_fitness = 0
+        current_pos = -1
+        for pos in range(len(aux_colors)):
+            if aux_colors[pos].fitness > max_fitness:
+                max_fitness = aux_colors[pos].fitness
+                current_pos = pos
+
+        selected_colors.append(aux_colors[current_pos])
+        selected_positions.append(used[current_pos])
 
     return selected_colors
 
 
-def crossover(c1: Color, c2: Color):
-    first_child_rgb = []
-    second_child_rgb = []
-    for i in range(3):
+def crossover(c1: ColorMix, c2: ColorMix):
+    first_child_proportions = []
+    second_child_proportions = []
+    first_child_proportion_sum = 0
+    second_child_proportion_sum = 0
+    for i in range(len(c1.proportions)):
         prob = random.randint(0, 1)
         if prob == 0:
-            first_child_rgb.append(c1.rgb[i])
-            second_child_rgb.append(c2.rgb[i])
+            first_child_proportions.append(c1.proportions[i])
+            first_child_proportion_sum += c1.proportions[i]
+            second_child_proportions.append(c2.proportions[i])
+            second_child_proportion_sum += c2.proportions[i]
         else:
-            second_child_rgb.append(c1.rgb[i])
-            first_child_rgb.append(c2.rgb[i])
-    first_child = Color(first_child_rgb[0], first_child_rgb[1], first_child_rgb[2])
-    second_child = Color(second_child_rgb[0], second_child_rgb[1], second_child_rgb[2])
+            second_child_proportions.append(c1.proportions[i])
+            second_child_proportion_sum += c1.proportions[i]
+            first_child_proportions.append(c2.proportions[i])
+            first_child_proportion_sum += c2.proportions[i]
+
+    for i in range(len(c1.proportions)):
+        first_child_proportion_value = first_child_proportions[i] * 100 / first_child_proportion_sum
+        first_child_proportions[i] = first_child_proportion_value
+        second_child_proportions_value = second_child_proportions[i] * 100 / second_child_proportion_sum
+        second_child_proportions[i] = second_child_proportions_value
+
+    first_child = ColorMix(first_child_proportions)
+    second_child = ColorMix(second_child_proportions)
 
     return first_child, second_child
 
@@ -117,25 +223,7 @@ def get_children(parent_array: []):
     # [[rgb1, rgb2]]
     # [c1, c2, c3]
 
-    used = []
     children_colors = []
-    """
-    for p1 in range(len(parent_array)):
-        for p2 in range(len(parent_array)):
-            first_parent = parent_array[p1]
-            second_parent = parent_array[p2]
-            if first_parent is not None \
-                    and second_parent is not None \
-                    and not first_parent.__eq__(second_parent) \
-                    and not used.__contains__([p1, p2]) \
-                    and not used.__contains__([p2, p1]):
-                first_child, second_child = crossover(first_parent, second_parent)
-                children_colors.append(first_child)
-                children_colors.append(second_child)
-                used.append([p1, p2])
-                parent_array[p1] = None
-                parent_array[p2] = None   
-    """
     for p1 in range(len(parent_array)):
         first_parent = parent_array[p1]
         if first_parent.uses > 0:
@@ -157,31 +245,40 @@ def print_color_palette(colors: []):
         print(color)
 
 
-def uniform_mutation(color: Color, mutation_probability, mutation_delta):
-    color.rgb[0] = get_mutated_color(color.rgb[0], get_mutation_delta(mutation_probability, mutation_delta))
-    color.rgb[1] = get_mutated_color(color.rgb[1], get_mutation_delta(mutation_probability, mutation_delta))
-    color.rgb[2] = get_mutated_color(color.rgb[2], get_mutation_delta(mutation_probability, mutation_delta))
+def print_color_mix_array(colors: [], color_palette: []):
+    print("Color Mix Array:")
+    for color in colors:
+        rgb = get_rgb_from_mix(color, color_palette)
+        print(f"RGB: {rgb}, Fitness: {color.fitness}, Uses: {color.uses}")
 
 
-def gen_mutation(color: Color, mutation_probability, mutation_delta):
-    rand = random.randint(0, 2)
-    color.rgb[rand] = get_mutated_color(color.rgb[rand], get_mutation_delta(mutation_probability, mutation_delta))
+def uniform_mutation(color_mix: ColorMix, mutation_probability, mutation_delta):
+    for i in range(len(color_mix.proportions)):
+        color_mix.proportions[i] = get_mutated_proportion(color_mix.proportions[i],
+                                                          get_mutation_delta(mutation_probability, mutation_delta))
 
 
-def multi_gen_limited_mutation(color: Color, mutation_probability, mutation_delta):
+def gen_mutation(color_mix: ColorMix, mutation_probability, mutation_delta):
+    rand = random.randint(0, len(color_mix.proportions) - 1)
+    color_mix.proportions[rand] = get_mutated_proportion(color_mix.proportions[rand],
+                                                         get_mutation_delta(mutation_probability, mutation_delta))
+
+
+def multi_gen_limited_mutation(color_mix: ColorMix, mutation_probability, mutation_delta):
     if is_mutation_delta(mutation_probability):
-        quantity = random.randint(1, 3)
-        start = random.randint(0, 2)
+        quantity = random.randint(1, len(color_mix.proportions))
+        start = random.randint(0, len(color_mix.proportions) - 1)
         for i in range(quantity):
-            pos = (start + i) % 3
-            color.rgb[pos] = get_mutated_color(color.rgb[pos], get_mutation_delta(101, mutation_delta))
+            pos = (start + i) % len(color_mix.proportions)
+            color_mix.proportions[pos] = get_mutated_proportion(color_mix.proportions[pos],
+                                                                get_mutation_delta(101, mutation_delta))
 
 
-def complete_mutation(color: Color, mutation_probability, mutation_delta):
+def complete_mutation(color_mix: ColorMix, mutation_probability, mutation_delta):
     if is_mutation_delta(mutation_probability):
-        color.rgb[0] = get_mutated_color(color.rgb[0], get_mutation_delta(101, mutation_delta))
-        color.rgb[1] = get_mutated_color(color.rgb[1], get_mutation_delta(101, mutation_delta))
-        color.rgb[2] = get_mutated_color(color.rgb[2], get_mutation_delta(101, mutation_delta))
+        for i in range(len(color_mix.proportions)):
+            color_mix.proportions[i] = get_mutated_proportion(color_mix.proportions[i],
+                                                              get_mutation_delta(101, mutation_delta))
 
 
 def get_mutation_delta(mutation_probability, mutation_delta):
@@ -191,12 +288,12 @@ def get_mutation_delta(mutation_probability, mutation_delta):
     return 0
 
 
-def get_mutated_color(color, delta):
-    if color + delta < 0:
+def get_mutated_proportion(proportion, delta):
+    if proportion + delta < 0:
         return 0
-    if color + delta > 255:
-        return 255
-    return color + delta
+    if proportion + delta > 100:
+        return 100
+    return proportion + delta
 
 
 def is_mutation_delta(mutation_probability):
@@ -207,23 +304,29 @@ def is_mutation_delta(mutation_probability):
 
 
 def run(target_color, mutation_probability, current_color_gen, mutation_delta, k, mutation, selection_method,
-        max_cycles):
+        max_cycles, color_palette):
     count = 0
     is_mutation = (mutation_probability != 0 and mutation_delta != 0)
-    while not current_color_gen[0].__eq__(target_color) \
+    current_rgb = get_rgb_from_mix(current_color_gen[0], color_palette)
+    diff = 1
+    while not current_rgb.__eq__(target_color.rgb) \
             and (count < 1000 or is_mutation) \
-            and (not is_mutation or (max_cycles != -1 and count < max_cycles and is_mutation)):
+            and (not is_mutation or max_cycles == -1 or (count < max_cycles and is_mutation)) \
+            :
         count += 1
-        # print(f"count: {count}, fitness: {current_color_gen[0].fitness}")
+        previous_color_gen = copy.deepcopy(current_color_gen)
+        print(f"count: {count}, fitness: {current_color_gen[0].fitness}")
         # print_color_palette(current_color_gen)
         # Parent selection
         parent_colors = []
         if selection_method.__eq__("elite"):
             parent_colors = elite_selection_method(current_color_gen, k)
         if selection_method.__eq__("random"):
-            parent_colors = random_selection_method(current_color_gen, k)
+            parent_colors = random_selection_method(current_color_gen, k, color_palette)
         if selection_method.__eq__("deterministic_tournament"):
             parent_colors = deterministic_tournament_selection_method(current_color_gen, k, 3)
+
+        print("Sale selection")
         # Crossover
         children_colors = get_children(copy.deepcopy(parent_colors))
         # Child mutation
@@ -237,17 +340,40 @@ def run(target_color, mutation_probability, current_color_gen, mutation_delta, k
             if mutation.__eq__("complete"):
                 complete_mutation(child, mutation_probability, mutation_delta)
 
+        for child_pos in range(len(children_colors)):
+            children_colors[child_pos].proportions = normalize_proportions(children_colors[child_pos].proportions)
+
         # Fill-All implementation, cuando vuelve a entrar hace un elite selection
         current_color_gen = []
-        for color in copy.deepcopy(parent_colors) + copy.deepcopy(children_colors):
-            calculate_fitness(target_color, color)
-            if not current_color_gen.__contains__(color):
+        for color in copy.deepcopy(children_colors) + copy.deepcopy(parent_colors):
+            if color.fitness == 0:
+                calculate_fitness(target_color, color, color_palette)
+            if not contains(current_color_gen, color, color_palette):
                 bisect.insort(current_color_gen, color)
+
+        current_rgb = get_rgb_from_mix(current_color_gen[0], color_palette)
+
+        diff = get_gen_difference(previous_color_gen, current_color_gen, color_palette)
+        print(f"gen_diff: {len(current_color_gen)}")
+        print(f"rgb: {current_rgb}")
+        # print_color_mix_array(current_color_gen, color_palette)
 
     return current_color_gen, count
 
 
-def get_random_population(population_length: int, target_color: Color):
+def get_gen_difference(gen1: [], gen2: [], color_palette):
+    dif = 0
+    length = min(len(gen1), len(gen2))
+    for i in range(length):
+        rgb1 = get_rgb_from_mix(gen1[i], color_palette)
+        rgb2 = get_rgb_from_mix(gen2[i], color_palette)
+        if not rgb1.__eq__(rgb2):
+            dif += 1
+    dif += abs(len(gen1) - len(gen2))
+    return dif
+
+
+def get_random_palette(population_length: int, target_color: Color):
     current_color_gen = []
 
     for color_data in range(population_length):
@@ -255,10 +381,40 @@ def get_random_population(population_length: int, target_color: Color):
         g = random.randint(0, 255)
         b = random.randint(0, 255)
         color = Color(r, g, b)
-        calculate_fitness(target_color, color)
-        bisect.insort(current_color_gen, color)
+        current_color_gen.append(color)
 
     return current_color_gen
+
+
+def get_color_palette(color_palette: []):
+    current_color_gen = []
+    for i in range(len(color_palette)):
+        r = color_palette[i][0]
+        g = color_palette[i][1]
+        b = color_palette[i][2]
+        color = Color(r, g, b)
+        current_color_gen.append(color)
+    return current_color_gen
+
+
+def get_random_population(population_length: int, target_color: Color, color_palette: []):
+    current_color_mix_gen = []
+
+    for color_mix_pos in range(population_length):
+        proportions = []
+        proportion_sum = 0
+        for proportion in range(len(color_palette)):
+            rand_proportion = random.randint(0, 100)
+            proportion_sum += rand_proportion
+            proportions.append(rand_proportion)
+        for pos in range(len(proportions)):
+            proportion_value = proportions[pos] * 100 / proportion_sum
+            proportions[pos] = proportion_value
+        color_mix = ColorMix(proportions)
+        calculate_fitness(target_color, color_mix, color_palette)
+        bisect.insort(current_color_mix_gen, color_mix)
+
+    return current_color_mix_gen
 
 
 def run_statistics_mutation(population_length: int, target_color: Color, mutations: [], mutation_probability: int,
@@ -266,7 +422,7 @@ def run_statistics_mutation(population_length: int, target_color: Color, mutatio
     mutation_cycles = [0, 0, 0, 0]
     for j in range(statistic_count):
         print(j)
-        current_color_gen = get_random_population(population_length, target_color)
+        current_color_gen = get_random_palette(population_length, target_color)
         for i in range(len(mutations)):
             new_gen = copy.deepcopy(current_color_gen)
             new_gen, count = run(target_color, mutation_probability, new_gen, mutation_delta, k, mutations[i],
@@ -289,7 +445,7 @@ def run_statistics_selection(population_length: int, target_color: Color, select
     selection_cycles = [0, 0, 0]
     for j in range(statistic_count):
         print(j)
-        current_color_gen = get_random_population(population_length, target_color)
+        current_color_gen = get_random_palette(population_length, target_color)
         for i in range(len(selection_methods)):
             new_gen = copy.deepcopy(current_color_gen)
             new_gen, count = run(target_color, mutation_probability, new_gen, mutation_delta, k,
@@ -319,9 +475,10 @@ def main():
             print("Target color data must be a size 3 array of integers between 0 and 255")
             return
         population_length = config_data["population_length"]
-        if population_length < 2:
-            print("Population length must be bigger than 2")
+        if population_length < 3 and population_length != -1:
+            print("Population length must be bigger than 3")
             return
+        color_palette = config_data["color_palette"]
         k = config_data["K"]
         if k < 2:
             print("K must be bigger than 2")
@@ -364,6 +521,21 @@ def main():
 
     target_color = Color(target_color_data[0], target_color_data[1], target_color_data[2])
 
+    color_palette_aux = get_color_palette(color_palette)
+
+    if population_length != -1:
+        color_palette_aux = get_random_palette(population_length, target_color)  # TODO remove param
+    else:
+        population_length = len(color_palette_aux)
+
+    initial_population = get_random_population(population_length, target_color, color_palette_aux)
+
+    current_color_gen, count = run(target_color, mutation_probability, initial_population, mutation_delta, k,
+                                   mutation_type, selection_method,
+                                   max_cycles, color_palette_aux)
+
+    print(f"Finished in: {count}, color: {get_rgb_from_mix(current_color_gen[0], color_palette_aux)}")
+    """
     if mutation_statistics:
         run_statistics_mutation(population_length, target_color, mutations, mutation_probability,
                                 mutation_delta, k, selection_method, 100, max_cycles)
@@ -375,6 +547,7 @@ def main():
         current_color_gen = get_random_population(population_length, target_color)
         run(target_color, mutation_probability, current_color_gen, mutation_delta, k, mutation_type, selection_method,
             max_cycles)
+    """""
 
 
 if __name__ == "__main__":

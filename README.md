@@ -17,15 +17,16 @@ Heuristicas -> Costo --> 1 movimiento en todas las posibilidades
 
 # TP1 - Lado B
 >- Genotipo - Alelos - Locus (Cromosomas son ejemplos de Genotipos)
->- Genotipo -> R | G | B
+>- Genotipo -> C1 | C2 | ... | CN
 >- Alelos:
->  - Para R -> [0,255] entero
->  - Para G -> [0,255] entero
->  - Para B -> [0,255] entero
+>  - Para R -> [0,100] Float
+>  - Para G -> [0,100] Float
+>  - Para B -> [0,100] Float
 >- Locus:
->  - 1º R
->  - 2º G
->  - 3º B
+>  - 1º C1
+>  - 2º C2
+>  - ...
+>  - Nº CN
 
 - Validar que pasa cuando los params son vacios --> Listo :)
 - Agregar los metodos de mutacion distintos a la config --> Listo :)

@@ -1,12 +1,17 @@
 {
   "target_color": [120, 230, 17],
-  "population_length": 20,
-  "K": 10,
+  "color_palette": [
+    [255, 0, 0],
+    [0, 255, 0],
+    [0, 0, 255]
+  ],
+  "population_length": -1,
+  "K": 20,
   "mutation_probability": 10,
-  "mutation_delta": 5,
+  "mutation_delta": 1,
   "mutation_type": "uniform",
-  "selection_method": "elite",
+  "selection_method": "deterministic_tournament",
   "mutation_statistics": false,
-  "selection_statistics": true,
-  "max_cycles": 1000
+  "selection_statistics": false,
+  "max_cycles": -1
 }
