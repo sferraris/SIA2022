@@ -274,9 +274,13 @@ def run_statistics_mutation(population_length: int, target_color: Color, mutatio
             # print(f"Selected Color: {new_gen[0]}, fitness: {new_gen[0].fitness}, cycles: {count}")
             mutation_cycles[i] += count
 
-    print(
-        f"uniform: {mutation_cycles[0] / statistic_count}, gen: {mutation_cycles[1] / statistic_count}, "
-        f"multi_gen_limited: {mutation_cycles[2] / statistic_count}, complete: {mutation_cycles[3] / statistic_count}")
+    print(f"Selection method used: {selection_method}")
+    print(f"Average cycles:")
+    for i in range(len(mutations)):
+        print(f"{mutations[i]}: {mutation_cycles[i] / statistic_count} cycles.")
+    # print(
+    #    f"uniform: {mutation_cycles[0] / statistic_count}, gen: {mutation_cycles[1] / statistic_count}, "
+    #    f"multi_gen_limited: {mutation_cycles[2] / statistic_count}, complete: {mutation_cycles[3] / statistic_count}")
 
 
 def run_statistics_selection(population_length: int, target_color: Color, selection_methods: [],
@@ -291,9 +295,15 @@ def run_statistics_selection(population_length: int, target_color: Color, select
             new_gen, count = run(target_color, mutation_probability, new_gen, mutation_delta, k,
                                  mutation_type, selection_methods[i], max_cycles)
             selection_cycles[i] += count
-    print(
-        f"elite: {selection_cycles[0] / statistic_count}, random: {selection_cycles[1] / statistic_count}, "
-        f"deterministic_tournament: {selection_cycles[2]/statistic_count}")
+
+    print(f"Mutation method used: {mutation_type}")
+    print(f"Average cycles:")
+    for i in range(len(selection_methods)):
+        print(f"{selection_methods[i]}: {selection_cycles[i] / statistic_count} cycles.")
+
+    # print(
+    #    f"elite: {selection_cycles[0] / statistic_count}, random: {selection_cycles[1] / statistic_count}, "
+    #    f"deterministic_tournament: {selection_cycles[2]/statistic_count}")
 
 
 def main():

@@ -3,9 +3,9 @@
   "population_length": 20,
   "K": 10,
   "mutation_probability": 10,
-  "mutation_delta": 1,
-  "mutation_type": "complete",
-  "selection_method": "deterministic_tournament",
+  "mutation_delta": 5,
+  "mutation_type": "uniform",
+  "selection_method": "elite",
   "mutation_statistics": false,
   "selection_statistics": true,
   "max_cycles": 1000
