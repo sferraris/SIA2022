@@ -6,6 +6,7 @@ from grid import MyGame
 import arcade
 import copy
 import json
+import sys
 
 # Set how many rows and columns we will have
 HEADER_COUNT = 2
@@ -71,33 +72,6 @@ class Node:
         return (self.state.heuristic + self.state.cost).__lt__(other.state.heuristic + other.state.cost)
 
 
-# def get_decision_tree(game: MyGame):
-#    tree = Node(game.current_color, game.colored_cells.copy(), game.border_cells.copy(), game.grid.copy(), total_moves,
-#                0)
-#    get_decision_tree_rec(tree, game)
-#    return tree
-#
-#
-# def get_decision_tree_rec(node: Node, game: MyGame):
-#    if len(node.state.border_cells) + len(node.state.colored_cells) == matrix_size * matrix_size:
-#        node.state.win = 1
-#        return 1
-#    for color in range(6):
-#        if color != node.state.color:
-#            child = get_child(node, color, game)
-#            node.state.children.append(child)
-#
-#            if child.state.moves == 0 and len(child.state.border_cells) + len(child.state.colored_cells) == matrix_size * (
-#                    matrix_size - 2):
-#                node.state.win = 1
-#                child.state.win = 1
-#            elif child.state.moves > 0:
-#                return_value = get_decision_tree_rec(child, game)
-#                if return_value == 1:
-#                    node.state.win = 1
-#    return node.state.win
-
-
 def get_child(node: Node, color: int, game: MyGame, total_moves: int, matrix_size: int, heuristic):
     child_color = color
     cells_to_paint = game.get_related_cells(copy.deepcopy(node.state.border_cells), color, node.state.grid,
@@ -129,11 +103,32 @@ def get_child(node: Node, color: int, game: MyGame, total_moves: int, matrix_siz
             child_cost = child_moves
         if heuristic == "cells_left":
             child_heuristic = matrix_size * matrix_size - (len(child_border_cells) + len(child_colored_cells))
-
+        if heuristic == "colors_left":
+            child_heuristic = game.calculate_remaining_colors(copy.deepcopy(child_colored_cells),
+                                                              copy.deepcopy(child_border_cells),
+                                                              copy.deepcopy(child_grid))
+        if heuristic == "colors_left_cost":
+            child_heuristic = game.calculate_remaining_colors(copy.deepcopy(child_colored_cells),
+                                                              copy.deepcopy(child_border_cells),
+                                                              copy.deepcopy(child_grid))
+            child_cost = child_moves
+        if heuristic == "shortest_path":
+            aux = State(child_color, child_colored_cells, child_border_cells, child_grid, 0,
+                        0, 0, 0)
+            child_heuristic = shortest_path(game, aux, matrix_size, copy.deepcopy(game.color_count))
+        if heuristic == "shortest_path_cost":
+            aux = State(child_color, child_colored_cells, child_border_cells, child_grid, 0,
+                        0, 0, 0)
+            child_heuristic = shortest_path(game, aux, matrix_size, copy.deepcopy(game.color_count))
+            child_cost = child_moves
     child_state = State(child_color, child_colored_cells, child_border_cells, child_grid, child_moves,
                         child_cells_to_paint, child_heuristic, child_cost)
     child = Node(child_state)
     return copy.deepcopy(child)
+
+
+expanded = 0
+cant_frontier = 0
 
 
 def DFS(game: MyGame, color_number: int, total_moves: int, matrix_size: int):
@@ -141,12 +136,16 @@ def DFS(game: MyGame, color_number: int, total_moves: int, matrix_size: int):
                        0, 0, 0, 0)
     tree = Node(tree_state)
     visited = set()
+    global expanded
+    expanded += 1
     DFS_rec(tree, game, color_number, total_moves, matrix_size, copy.deepcopy(visited))
-    return tree
+    return tree if tree.state.win else None
 
 
 def DFS_rec(node: Node, game: MyGame, color_number: int, total_moves: int, matrix_size: int, visited: set):
     visited.add(node.state.__hash__())
+    global expanded
+    global cant_frontier
     for color in range(color_number):
         if color != node.state.color and node.state.win == 0:
             child = get_child(node, color, game, total_moves, matrix_size, None)
@@ -156,13 +155,17 @@ def DFS_rec(node: Node, game: MyGame, color_number: int, total_moves: int, matri
                     node.state.win = 1
                     visited.add(child.state)
                     node.children.append(child)
+                    cant_frontier += 1
                     return 1
                 elif total_moves == -1 or child.state.moves < total_moves:
+                    expanded += 1
                     return_value = DFS_rec(child, game, color_number, total_moves, matrix_size, copy.deepcopy(visited))
                     if return_value == 1:
                         node.state.win = 1
                         node.children.append(child)
                         return 1
+                else:
+                    cant_frontier += 1
 
 
 def BFS(game: MyGame, color_number: int, total_moves: int, matrix_size: int):
@@ -175,20 +178,29 @@ def BFS(game: MyGame, color_number: int, total_moves: int, matrix_size: int):
 
 def BFS_alg(tree: Node, game: MyGame, color_number: int, total_moves: int, matrix_size: int, visited: set):
     bfs_queue = [tree]
+    global expanded
+    global cant_frontier
     while bfs_queue:
         node = bfs_queue.pop(0)
+        expanded += 1
         visited.add(node.state.__hash__())
         node.state.win = 1
         if total_moves == -1 or node.state.moves < total_moves:
+            children = []
+            analyzed = 0
             for color in range(color_number):
                 if color != node.state.color:
                     child = get_child(node, color, game, total_moves, matrix_size, None)
                     if not visited.__contains__(child.state.__hash__()):
                         child.parent = node
                         node.children.append(child)
-                        bfs_queue.append(child)
+                        children.append(child)
+                        analyzed += 1
                         if len(child.state.border_cells) + len(child.state.colored_cells) == matrix_size * matrix_size:
+                            cant_frontier += len(bfs_queue) + analyzed
                             return get_solution(child)
+            bfs_queue += children
+
     return None
 
 
@@ -197,28 +209,38 @@ def local_greedy(game: MyGame, color_number: int, heuristic, total_moves: int, m
                        0, 0, 0, 0)
     visited = set()
     tree = Node(tree_state)
+    global expanded
+    expanded += 1
     local_greedy_rec(tree, game, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
-    return tree
+    return tree if tree.state.win else None
 
 
 def local_greedy_rec(node: Node, game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size: int,
                      visited: set):
     visited.add(node.state.__hash__())
     children_array = []
+    global expanded
+    global cant_frontier
     for color in range(color_number):
         if color != node.state.color:
             child = get_child(node, color, game, total_moves, matrix_size, heuristic)
             if not visited.__contains__(child.state.__hash__()):
                 bisect.insort(children_array, child)
-
+    analyzed = 0
     for child in children_array:
+        analyzed += 1
+        vis = []
         if node.state.win == 0:
+            vis.append(child)
             if len(child.state.border_cells) + len(child.state.colored_cells) == matrix_size * matrix_size:
                 child.state.win = 1
                 node.state.win = 1
                 node.children.append(child)
+                cant_frontier += analyzed
                 return 1
             elif total_moves == -1 or child.state.moves < total_moves:
+                expanded += 1
+                cant_frontier += len(children_array) - analyzed
                 return_value = local_greedy_rec(child, game, color_number, heuristic, total_moves, matrix_size,
                                                 copy.deepcopy(visited))
                 if return_value == 1:
@@ -233,18 +255,21 @@ def global_greedy(game: MyGame, color_number: int, heuristic, total_moves: int, 
     visited = set()
     tree = Node(tree_state)
     frontier_nodes = [tree]
+    global expanded
     return global_greedy_rec(game, frontier_nodes, color_number, heuristic, total_moves, matrix_size,
                              copy.deepcopy(visited))
 
 
-def global_greedy_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves: int, matrix_size: int, visited: set):
+def global_greedy_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves: int, matrix_size: int,
+                      visited: set):
     if len(frontier) == 0:
         return None
-
+    global expanded
+    global cant_frontier
     node = frontier.pop(0)
     visited.add(node.state.__hash__())
-
     if len(node.state.border_cells) + len(node.state.colored_cells) == matrix_size * matrix_size:
+        cant_frontier += len(frontier) + 1
         return get_solution(node)
     if total_moves == -1 or node.state.moves < total_moves:
         for color in range(color_number):
@@ -253,6 +278,9 @@ def global_greedy_rec(game: MyGame, frontier: [], color_number: int, heuristic, 
                 child.parent = node
                 if not visited.__contains__(child.state.__hash__()):
                     bisect.insort(frontier, child)
+        expanded += 1
+    if node.state.moves >= total_moves != -1:
+        cant_frontier += 1
     return global_greedy_rec(game, frontier, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
 
 
@@ -262,20 +290,20 @@ def a(game: MyGame, color_number: int, heuristic, total_moves: int, matrix_size:
     visited = set()
     tree = Node(tree_state)
     frontier_nodes = [tree]
-    return a_rec(game, frontier_nodes, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
+    return a_rec(game, frontier_nodes, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited), True)
 
 
-def a_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves: int, matrix_size: int, visited: set):
+def a_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves: int, matrix_size: int, visited: set,
+          internal_count: bool):
     if len(frontier) == 0:
         return None
-
-    # frontier.sort(key=operator.itemgetter('heuristic_and_cost'))
-    # print(f"Start Frontier: {frontier}")
+    global expanded
+    global cant_frontier
     node = frontier.pop(0)
     visited.add(node.state.__hash__())
-    # print(f"Lower node: {node}")
-
     if len(node.state.border_cells) + len(node.state.colored_cells) == matrix_size * matrix_size:
+        if internal_count:
+            cant_frontier += len(frontier) + 1
         return get_solution(node)
     if total_moves == -1 or node.state.moves < total_moves:
         for color in range(color_number):
@@ -284,7 +312,11 @@ def a_rec(game: MyGame, frontier: [], color_number: int, heuristic, total_moves:
                 child.parent = node
                 if not visited.__contains__(child.state.__hash__()):
                     bisect.insort(frontier, child)
-    return a_rec(game, frontier, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited))
+        expanded += 1 if internal_count else 0
+    if node.state.moves >= total_moves != -1:
+        cant_frontier += 1 if internal_count else 0
+    return a_rec(game, frontier, color_number, heuristic, total_moves, matrix_size, copy.deepcopy(visited),
+                 internal_count)
 
 
 def get_solution(node: Node):
@@ -331,7 +363,39 @@ def get_color(number):
     return colors[number]
 
 
+def get_total_cost(tree: Node):
+    total_cost = 0
+    aux = copy.deepcopy(tree)
+    while len(aux.children) > 0:
+        total_cost += 1
+        aux = copy.deepcopy(aux.children[0])
+    return total_cost
+
+
+def shortest_path(game: MyGame, state: State, matrix_size, cant_colors):
+    tree_state = copy.deepcopy(state)
+    visited = set()
+    tree = Node(tree_state)
+    frontier_nodes = [tree]
+    return get_total_cost(
+        a_rec(game, frontier_nodes, cant_colors, "colors_left", -1, matrix_size, copy.deepcopy(visited), False))
+
+
+def print_solution_and_get_cost(tree: Node):
+    aux = copy.deepcopy(tree)
+    s = get_color(aux.state.color)
+    total_cost = 0
+    while len(aux.children) > 0:
+        total_cost += 1
+        s = s.__add__(" --> ")
+        aux = copy.deepcopy(aux.children[0])
+        s = s.__add__(get_color(aux.state.color))
+    print(s)
+    return total_cost
+
+
 def main():
+    sys.setrecursionlimit(1000000)
     config_file = open("config.json")
     config_data = json.load(config_file)
     print(config_data)
@@ -343,6 +407,12 @@ def main():
     color_number = config_data["color_number"]
     algorythm = config_data["algorythm"]
 
+    if color_number > 26 or color_number <= 0:
+        print("Se aceptan hasta 26 colores")
+        exit()
+    if heuristic != "cells_left" and heuristic != "colors_left" and heuristic != "shortest_path":
+        print("No se reconoce la heuristica elegida")
+        exit()
     screen_width = (WIDTH + MARGIN) * matrix_size + MARGIN
     screen_height = (HEIGHT + MARGIN) * (matrix_size + HEADER_COUNT) + MARGIN
 
@@ -351,7 +421,6 @@ def main():
         screen_height = (HEIGHT + MARGIN) * (color_number + HEADER_COUNT) + MARGIN
 
     game = MyGame(screen_width, screen_height, SCREEN_TITLE, total_moves, None, matrix_size, HEADER_COUNT, color_number)
-    g = copy.deepcopy(game.grid)
     g2 = copy.deepcopy(game.grid)
     start_time = time.time()
     tree = {}
@@ -365,34 +434,21 @@ def main():
         tree = global_greedy(game, color_number, heuristic, total_moves, matrix_size)
     elif algorythm == "a*":
         tree = a(game, color_number, heuristic, total_moves, matrix_size)
-    print(tree)
+    else:
+        print("No se reconocio el algoritmo elegido")
+        exit()
+    global expanded
+    global cant_frontier
     print("--- %s seconds ---" % (time.time() - start_time))
-    arcade.close_window()
-    #game = MyGame(screen_width, screen_height, SCREEN_TITLE, -1, g, matrix_size, HEADER_COUNT, color_number)
-    #
-    #start_time2 = time.time()
-    #tree2 = {}
-    #if algorythm == "DFS":
-    #    tree2 = DFS(game, color_number, -1, matrix_size)
-    #elif algorythm == "BFS":
-    #    tree2 = BFS(game, color_number, -1, matrix_size)
-    #elif algorythm == "local_greedy":
-    #    tree2 = local_greedy(game, color_number, heuristic, -1, matrix_size)
-    #elif algorythm == "global_greedy":
-    #    tree2 = global_greedy(game, color_number, heuristic, -1, matrix_size)
-    #elif algorythm == "a*":
-    #    tree2 = a(game, color_number, heuristic, -1, matrix_size)
-    #
-    #print(tree2)
-    #print("--- %s seconds ---" % (time.time() - start_time2))
-    # open text file
-    # text_file = open("./data.json", "w")
-
-    # write string to file
-    # text_file.write(tree.__str__())
-
-    # close file
-    # text_file.close()
+    if tree is not None:
+        print("Solucion: el primero color es el color con el que se arranca")
+        cost = print_solution_and_get_cost(copy.deepcopy(tree))
+        print("Costo de la solucion: %d" % cost)
+    else:
+        print('No se ah encontrado una solucion')
+    print("Se expandieron %d nodos" % expanded)
+    print("cantidad de nodos fronters %d" % cant_frontier)
+    print(" ")
 
     arcade.close_window()
     game = MyGame(screen_width, screen_height, SCREEN_TITLE, total_moves, g2, matrix_size, HEADER_COUNT, color_number)

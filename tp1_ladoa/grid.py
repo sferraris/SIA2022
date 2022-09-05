@@ -29,8 +29,6 @@ class MyGame(arcade.Window):
 
         super().__init__(width, height, title)
 
-        # Create a 2 dimensional array. A two-dimensional
-        # array is simply a list of lists.
         self.colored_cells = []
         self.border_cells = []
         self.current_color = None
@@ -86,8 +84,6 @@ class MyGame(arcade.Window):
 
     def set_grid(self):
         for row in range(self.real_size + self.header_count):
-            # Add an empty array that will hold each cell
-            # in this row
             self.grid.append([])
             for column in range(self.real_size):
                 if row == self.real_size + self.header_count - 1:
@@ -116,8 +112,7 @@ class MyGame(arcade.Window):
         # Draw the grid
         for row in range(self.real_size + self.header_count):
             for column in range(self.real_size):
-                # Figure out what color to draw the box [arcade.color.PINK, arcade.color.WHITE, arcade.color.RED,
-                # arcade.color.GREEN, arcade.color.BLUE, arcade.color.BLACK]
+
                 color = self.colors[self.grid[row][column]]
 
                 # Do the math to figure out where the box is
@@ -135,11 +130,12 @@ class MyGame(arcade.Window):
         column = int(x // (WIDTH + MARGIN))
         row = int(y // (HEIGHT + MARGIN))
 
-        #print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column})")
+        # print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column})")
         # Make sure we are on-grid. It is possible to click in the upper right
         # corner in the margin and go to a grid location that doesn't exist
         color = column
-        if row == self.real_size + self.header_count - 1 and column < self.color_count and color != self.current_color and (self.total_moves == -1 or self.moves < self.total_moves):
+        if row == self.real_size + self.header_count - 1 and column < self.color_count and color != self.current_color and (
+                self.total_moves == -1 or self.moves < self.total_moves):
             self.moves += 1
             print(f"Move Nº{self.moves}")
             related_cells = self.get_related_cells(self.border_cells.copy(), color, self.grid, self.border_cells)
@@ -168,7 +164,8 @@ class MyGame(arcade.Window):
     def get_initial_info(self):
         row = self.real_size - 1
         column = 0
-        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid,self.border_cells)
+        initial_colored_cells = self.get_related_cells([[row, column]], self.current_color, self.grid,
+                                                       self.border_cells)
 
         for cell in initial_colored_cells:
             if self.is_border(cell[0], cell[1], self.grid.copy()):
@@ -199,3 +196,16 @@ class MyGame(arcade.Window):
         if row < self.real_size - self.matrix_size or row > self.real_size - 1 or column < 0 or column >= self.matrix_size:
             return False
         return True
+
+    def calculate_remaining_colors(self, colored_cells, border_cells, grid):
+        checked_cells = copy.deepcopy(colored_cells) + copy.deepcopy(border_cells)
+        colors = {}
+        for row in range(self.real_size + self.header_count):
+            for column in range(self.real_size):
+                if [row, column] not in checked_cells and self.is_valid(row, column):
+                    colors[grid[row][column]] = 1
+                    if len(colors) == self.colors:
+                        return len(colors)
+        return len(colors)
+
+
