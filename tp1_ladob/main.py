@@ -262,7 +262,7 @@ def complete_mutation(color_mix: ColorMix, mutation_probability, mutation_delta)
 def get_mutation_delta(mutation_probability, mutation_delta):
     mutation_decider = random.randint(0, 100)
     if mutation_decider < mutation_probability:
-        return random.randint(0, mutation_delta)
+        return random.randint(-mutation_delta, mutation_delta)
     return 0
 
 

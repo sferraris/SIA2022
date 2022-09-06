@@ -9,6 +9,6 @@
   "mutation_type": "complete",
   "selection_method": "elite",
   "mutation_statistics": false,
-  "selection_statistics": true,
-  "max_cycles": 1000
+  "selection_statistics": false,
+  "max_cycles": -1
 }
