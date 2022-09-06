@@ -61,9 +61,7 @@ def calculate_fitness(target_color: Color, color_mix: ColorMix, color_palette: [
 
 def get_rgb_from_mix(color_mix: ColorMix, color_palette: []):
     rgb = [0, 0, 0]
-    prop_sum = 0
-    for prop in color_mix.proportions:
-        prop_sum += prop
+
     for pos in range(len(color_palette)):
         rgb[0] += (color_mix.proportions[pos] / 100) * color_palette[pos].rgb[0]
         rgb[1] += (color_mix.proportions[pos] / 100) * color_palette[pos].rgb[1]
@@ -114,7 +112,7 @@ def elite_selection_method(color_mix_array: [], k: int):
     return selected_color_mix
 
 
-def random_selection_method(color_array: [], k: int, color_palette):
+def random_selection_method(color_array: [], k: int):
     used = []
     selected_colors = []
     if k >= len(color_array):
@@ -293,13 +291,14 @@ def run(target_color, mutation_probability, current_color_gen, mutation_delta, k
             and (count < 1000 or is_mutation) \
             and (not is_mutation or max_cycles == -1 or (count < max_cycles and is_mutation)):
         count += 1
-        # Parent selection
         previous_best_fitness = current_color_gen[0].fitness
         parent_colors = []
+
+        # Parent selection
         if selection_method.__eq__("elite"):
             parent_colors = elite_selection_method(current_color_gen, k)
         if selection_method.__eq__("random"):
-            parent_colors = random_selection_method(current_color_gen, k, color_palette)
+            parent_colors = random_selection_method(current_color_gen, k)
         if selection_method.__eq__("deterministic_tournament"):
             parent_colors = deterministic_tournament_selection_method(current_color_gen, k, 3)
 
