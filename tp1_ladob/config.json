@@ -1,12 +1,14 @@
 {
   "target_color": [120, 230, 17],
-  "population_length": 20,
-  "K": 10,
+  "color_palette": [
+  ],
+  "population_length": 10,
+  "K": 20,
   "mutation_probability": 10,
-  "mutation_delta": 5,
-  "mutation_type": "uniform",
+  "mutation_delta": 1,
+  "mutation_type": "complete",
   "selection_method": "elite",
   "mutation_statistics": false,
-  "selection_statistics": true,
-  "max_cycles": 1000
+  "selection_statistics": false,
+  "max_cycles": -1
 }
