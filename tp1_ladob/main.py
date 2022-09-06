@@ -505,6 +505,9 @@ def main():
         current_color_gen, count = run(target_color, mutation_probability, initial_population, mutation_delta, k,
                                        mutation_type, selection_method,
                                        max_cycles, color_palette_aux)
+        print(f"Proportions:")
+        for i in range(len(current_color_gen[0].proportions)):
+            print(f"{current_color_gen[0].proportions[i]}% of {color_palette_aux[i].rgb}")
         print(f"Finished in: {count}, color: {get_rgb_from_mix(current_color_gen[0], color_palette_aux)}")
 
 
