@@ -1,6 +1,6 @@
 class Point:
-    def __init__(self, e1, e2, expected_value):
-        self.e = [1, e1, e2]
+    def __init__(self, e, expected_value):
+        self.e = e
         self.expected_value = expected_value
 
     def __str__(self):
