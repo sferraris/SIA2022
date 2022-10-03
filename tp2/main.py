@@ -13,12 +13,12 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
-def perceptron_run(points: [], n: float, cot: int, error: float, dim: int, perceptron_type: str, b: float):
+def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: str, b: float):
     i = 0
     w = []
     for j in range(dim + 1):
         w.append(0.0)
-    w = numpy.random.uniform(-1, 1, dim+1)
+    w = numpy.random.uniform(-1, 1, dim + 1)
     print(w)
     error_min = math.inf
     perceptron: declarations.Perceptron = declarations.Perceptron(n, w)
@@ -42,12 +42,12 @@ def perceptron_run(points: [], n: float, cot: int, error: float, dim: int, perce
             o = math.tanh(b * h)
             delta_w = calculate_delta_w_non_linear_tan(points[m], perceptron.n, o, b)
             new_w: [] = calculate_w(delta_w, perceptron.w)
-            error = calculate_error_linear(points, new_w)
+            error = calculate_error_non_linear(points, new_w)
         elif perceptron_type == 'non-linear-logistic':
             o = 1 / (1 + math.e ** (-2 * b * h))
             delta_w = calculate_delta_w_non_linear_logistic(points[m], perceptron.n, o, b)
             new_w: [] = calculate_w(delta_w, perceptron.w)
-            error = calculate_error_linear(points, new_w)
+            error = calculate_error_non_linear(points, new_w)
         else:
             o = numpy.sign(h)
             if o == 0:
@@ -99,20 +99,20 @@ def calculate_delta_w_linear(points: [], n: float, dim: int, w: []):
 
 
 def calculate_delta_w_non_linear_tan(point: declarations.Point, n: float, o: float, b: float):
-    #delta_w = []
-    #for j in range(dim + 1):
+    # delta_w = []
+    # for j in range(dim + 1):
     #    delta_w.append(0.0)
     #
-    #for point in points:
+    # for point in points:
     #    h = calculate_excitement(point, w)
     #    o = math.tanh(b * h)
     #    wi = n * (point.expected_value - o) * b * (1 - o)
     #    for i in range(len(point.e)):
     #        delta_w[i] += wi * point.e[i]
     #
-    #return delta_w
+    # return delta_w
     delta_w = []
-    wi = n * (point.expected_value - o) * b * (1 - o)
+    wi = n * (point.normalized_expected_value - o) * b * (1 - o)
     for ei in point.e:
         delta_w.append(wi * ei)
 
@@ -120,20 +120,20 @@ def calculate_delta_w_non_linear_tan(point: declarations.Point, n: float, o: flo
 
 
 def calculate_delta_w_non_linear_logistic(point: declarations.Point, n: float, o: float, b: float):
-    #delta_w = []
-    #for j in range(dim + 1):
+    # delta_w = []
+    # for j in range(dim + 1):
     #    delta_w.append(0.0)
     #
-    #for point in points:
+    # for point in points:
     #    h = calculate_excitement(point, w)
     #    o = 1 / (1 + math.e ** (-2*b*h))
     #    wi = n * (point.expected_value - o) * 2 * b * o * (1 - o)
     #    for i in range(len(point.e)):
     #        delta_w[i] += wi * point.e[i]
     #
-    #return delta_w
+    # return delta_w
     delta_w = []
-    wi = n * (point.expected_value - o) * 2 * b * o * (1 - o)
+    wi = n * (point.normalized_expected_value - o) * 2 * b * o * (1 - o)
     for ei in point.e:
         delta_w.append(wi * ei)
 
@@ -160,24 +160,34 @@ def calculate_error_linear(points: [], w: []):
     error = 0
     for point in points:
         h = calculate_excitement(point, w)
-        #print(f"h: {h}, point: {point}")
-        error += math.pow(point.expected_value - h, 2)
+        # print(f"h: {h}, point: {point}")
+        error += (point.expected_value - h) ** 2
 
     return error * 1 / 2
 
 
-def main():
+def calculate_error_non_linear(points: [], w: []):
+    error = 0
+    for point in points:
+        h = calculate_excitement(point, w)
+        # print(f"h: {h}, point: {point}")
+        error += math.pow(point.normalized_expected_value - h, 2)
+
+    return error * 1 / 2
+
+
+def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear'):
     config_file = open("config.json")
     config_data = json.load(config_file)
+    if not config_data['config_by_code']:
+        cot = config_data["cot"]
+        n = config_data["n"]
+        x = config_data["x"]
+        y = config_data["y"]
+        b = config_data["b"]
+        normalization = config_data['normalization_type']
+        perceptron_type = config_data["perceptron_type"]
 
-    cot = config_data["cot"]
-    error = config_data["error"]
-    n = config_data["n"]
-    x = config_data["x"]
-    y = config_data["y"]
-    b = config_data["b"]
-
-    perceptron_type = config_data["perceptron_type"]
     point_array = []
     training_set = []
     evaluation_set = []
@@ -197,29 +207,56 @@ def main():
         csvreader = csv.reader(file)
         header = next(csvreader)
         dim = len(header) - 1
+        min_expected_value = math.inf
+        max_expected_value = 0
+        sum_values = 0
+        # TODO check
         for row in csvreader:
             arr = [1]
             expected_value = 0
             for i in range(len(row)):
                 if i == len(row) - 1:
                     expected_value = float(row[i])
+                    sum_values += expected_value
+                    if expected_value < min_expected_value:
+                        min_expected_value = expected_value
+                    if expected_value > max_expected_value:
+                        max_expected_value = expected_value
                 else:
                     arr.append(float(row[i]))
             point = declarations.Point(arr, expected_value)
             point_array.append(point)
+        r = max_expected_value - min_expected_value
+        mean = sum_values / len(point_array)
+        sum_dev_squared = 0
+        for point in point_array:
+            sum_dev_squared += (point.expected_value - mean) ** 2
+        standard_deviation = math.sqrt(sum_dev_squared / len(point_array))
         for i in range(len(point_array)):
-            if i < len(point_array)/2:
+            if normalization == 'scale':
+                if perceptron_type == 'non-linear-tan':
+                    point_array[i].normalized_expected_value = 2 * (
+                            point_array[i].expected_value - min_expected_value) / r - 1
+                if perceptron_type == 'non-linear-logistic':
+                    point_array[i].normalized_expected_value = (point_array[i].expected_value - min_expected_value) / r
+            if normalization == 'z-score':
+                point_array[i].normalized_expected_value = (point_array[i].expected_value - mean) / standard_deviation
+            if i < len(point_array) - 1:
                 training_set.append(point_array[i])
             else:
                 evaluation_set.append(point_array[i])
 
-    print(point_array)
-
-    perception = perceptron_run(training_set, n, cot, error, dim, perceptron_type, b)
+    perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
     print(perception)
-    error = calculate_error_linear(evaluation_set, perception.w)
-    print(error)
+    if perceptron_type == 'step':
+        error = calculate_error_step(evaluation_set, perception.w)
+    if perceptron_type == 'linear':
+        error = calculate_error_linear(evaluation_set, perception.w)
+    if perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
+        error = calculate_error_non_linear(evaluation_set, perception.w)
+    print(f"evaluation error: {error}")
+
     if perceptron_type == 'step':
         print(f"y = {perception.w[1] / (-1 * perception.w[2])} * x + {perception.w[0] / (-1 * perception.w[2])}")
 
@@ -234,21 +271,9 @@ def main():
                 color = 'black'
             plt.scatter(point.e[1], point.e[2], color=color)
         plt.show()
-    elif perceptron_type == 'linear' or perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
-        fig = plt.figure()
-        ax = plt.axes(projection='3d')
-        x = numpy.linspace(-5, 5, 100)
-        y = numpy.linspace(-5, 5, 100)
-        X, Y = numpy.meshgrid(x, y)
-        div = (-1 * perception.w[3])
-        z = (perception.w[0] / div + perception.w[1] / div * X + perception.w[2] / div * Y)
-        ax.plot_surface(X, Y, z, color='green')
 
-        for point in point_array:
-            color = 'red'
-            ax.scatter(point.e[1], point.e[2], point.e[3], color=color)
-        plt.show()
+    return perception, error
 
 
 if __name__ == "__main__":
-    main()
+    run()

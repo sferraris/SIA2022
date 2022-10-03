@@ -1,9 +1,11 @@
 {
-  "cot": 1000,
+  "cot": 5000,
   "error": 0.1,
-  "n": 0.1,
+  "n": 0.05,
   "x": [ [-1, 1], [1, -1], [-1, -1], [1, 1]],
   "y": [1, 1, -1, -1],
   "perceptron_type": "non-linear-tan",
-  "b": 1
+  "b": 1,
+  "normalization_type": "z-score",
+  "config_by_code": true
 }

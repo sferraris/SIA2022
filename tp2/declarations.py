@@ -2,6 +2,8 @@ class Point:
     def __init__(self, e, expected_value):
         self.e = e
         self.expected_value = expected_value
+        self.normalized_expected_value = None
+
 
     def __str__(self):
         return f"({self.e}) -> expected_value: {self.expected_value}"
