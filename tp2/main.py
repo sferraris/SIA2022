@@ -67,6 +67,75 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     return perceptron
 
 
+def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: str, b: float,
+                               layers_count: int, nodes_count: int):
+    i = 0
+    error_min = math.inf
+    layers = []
+    # 1 inicializar $
+    for i in range(layers_count):
+        nodes = []
+        for j in range(nodes_count):
+            if i == 0:
+                w = numpy.random.uniform(-1, 1, dim)
+                nodes.append(declarations.Node(n, w))
+            else:
+                w = numpy.random.uniform(-1, 1, nodes_count)
+                nodes.append(declarations.Node(n, w))
+        layers.append(declarations.Layer(nodes))
+
+    w = numpy.random.uniform(-1, 1, nodes_count)
+    nodes = [declarations.Node(n, w)]
+    layers.append(declarations.Layer(nodes))
+    multilayer_perceptron = declarations.MultilayerPerceptron(n, layers)
+
+    while error_min > 0 and i < cot:
+        # 2 tomar ej al azar del conjunto de entrenamiento y aplciar para al capa 0
+        m = random.randint(0, len(points) - 1)
+        point = points[m]
+        # h = calculate_excitement(points[m], perceptron.w)
+        # 3 propagar la entrada hasta la capa de salida
+        layers = multilayer_perceptron.layers
+        for i in range(len(layers)):
+            layer = layers[i]
+            array = []
+            for node in layer.nodes:
+                if i == 0:
+                    h = calculate_excitement(point, node.w) # TODO: fixme :)
+                else:
+                    h = calculate_excitement(layers[i - 1].point, node.w)
+                array.append(h)
+            layer.point.e = array
+        # 4 calcular error para la capa de salida
+        layer = layers[-1]
+        for node in layer.nodes:
+            h = layer.point.e[0]
+            error = (point.expected_value - calculate_o(h)) * calculate_o_derivative(h)
+            node.error = error
+
+        # 5 retropropagar n entre 2 y N
+        for i in reversed(range(len(layers) - 1)):
+            layer = layers[i]
+            for j in range(len(layer.nodes)):
+                node = layer.nodes[j]
+                h = layer.point.e[j]
+                
+                error = (point.expected_value - calculate_o(h)) * calculate_o_derivative(h)
+                node.error = error
+
+        # 6 actualizar los $ de las conexiones
+        # 7 calcular el error
+        i += 1
+
+
+def calculate_o(h: float):
+    return h
+
+
+def calculate_o_derivative(h: float):
+    return 1
+
+
 def calculate_excitement(point: declarations.Point, w: []):
     excitement = 0
     for i in range(len(w)):
