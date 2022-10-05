@@ -19,7 +19,6 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     for j in range(dim + 1):
         w.append(0.0)
     w = numpy.random.uniform(-1, 1, dim + 1)
-    print(w)
     error_min = math.inf
     perceptron: declarations.Perceptron = declarations.Perceptron(n, w)
     w_min = []
@@ -67,9 +66,9 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     return perceptron
 
 
-def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: str, b: float,
+def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float,
                                layers_count: int, nodes_count: int):
-    i = 0
+    stop_index = 0
     error_min = math.inf
     layers = []
     # 1 inicializar $
@@ -89,7 +88,8 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, percept
     layers.append(declarations.Layer(nodes))
     multilayer_perceptron = declarations.MultilayerPerceptron(n, layers)
 
-    while error_min > 0 and i < cot:
+    while error_min > 0 and stop_index < cot:
+        print(stop_index)
         # 2 tomar ej al azar del conjunto de entrenamiento y aplciar para al capa 0
         m = random.randint(0, len(points) - 1)
         point = points[m]
@@ -101,7 +101,7 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, percept
             array = []
             for node in layer.nodes:
                 if i == 0:
-                    h = calculate_excitement(point, node.w) # TODO: fixme :)
+                    h = calculate_excitement(point, node.w)
                 else:
                     h = calculate_excitement(layers[i - 1].point, node.w)
                 array.append(h)
@@ -110,7 +110,7 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, percept
         layer = layers[-1]
         for node in layer.nodes:
             h = layer.point.e[0]
-            error = (point.expected_value - calculate_o(h)) * calculate_o_derivative(h)
+            error = (point.expected_value - calculate_o(h, b)) * calculate_o_derivative(h, b)
             node.error = error
 
         # 5 retropropagar n entre 2 y N
@@ -119,21 +119,76 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, percept
             for j in range(len(layer.nodes)):
                 node = layer.nodes[j]
                 h = layer.point.e[j]
-                
-                error = (point.expected_value - calculate_o(h)) * calculate_o_derivative(h)
+                if i + 1 == len(layers) - 1:
+                    top_w = layers[i + 1].nodes[0].w
+                    top_e = layers[i + 1].point.e[0]
+                else:
+                    top_w = layers[i + 1].nodes[j].w
+                    top_e = layers[i + 1].point.e[j]
+
+                error_array = calculate_o_derivative(h, b) * numpy.dot(top_w, top_e)
+
+                error = 0
+                for e in error_array:
+                    error += e
+
                 node.error = error
 
         # 6 actualizar los $ de las conexiones
+        layer = layers[0]
+        for j in range(len(layer.nodes)):
+            node = layer.nodes[j]
+            delta_w = n * numpy.dot(point.e, node.error)
+            node.w = numpy.sum([node.w, delta_w], axis=0)
+
+        for i in range(len(layers) - 2):
+            j = i + 1
+            node = layer.nodes[j]
+            delta_w = n * numpy.dot(layers[i].point.e[j], node.error)  # TODO help
+            node.w = numpy.sum([node.w, delta_w], axis=0)
+
+        layer = layers[-1]
+        for j in range(len(layer.nodes)):
+            node = layer.nodes[j]
+            delta_w = n * numpy.dot(layers[-2].point.e[j], node.error)
+            node.w = numpy.sum([node.w, delta_w], axis=0)
         # 7 calcular el error
-        i += 1
+        error = calculate_multi_layer_error(points, multilayer_perceptron, b)
+        if error <= error_min:
+            error_min = error
+
+        stop_index += 1
+
+    return multilayer_perceptron
 
 
-def calculate_o(h: float):
-    return h
+def calculate_o(h: float, b: float):
+    return math.tanh(b * h)
 
 
-def calculate_o_derivative(h: float):
-    return 1
+def calculate_o_derivative(h: float, b: float):
+    return b * (1 - math.tanh(b * h) ** 2)
+
+
+def calculate_multi_layer_error(points: [], perceptron: declarations.MultilayerPerceptron, b:float):
+    layer = perceptron.layers[-1]
+    error = 0
+
+    prev_layer = perceptron.layers[-2]
+    for point in points:
+        for node in layer.nodes:
+            o_array = []
+            for h in prev_layer.point.e:
+                o_array.append(calculate_o(h, b))
+            aux = numpy.dot(node.w, o_array)
+
+            #print(node.w)
+            #print(o_array)
+            #print(aux)
+            aux_sum = aux
+            error += (point.expected_value - calculate_o(aux_sum, b)) ** 2
+
+    return error / 2
 
 
 def calculate_excitement(point: declarations.Point, w: []):
@@ -181,7 +236,7 @@ def calculate_delta_w_non_linear_tan(point: declarations.Point, n: float, o: flo
     #
     # return delta_w
     delta_w = []
-    wi = n * (point.normalized_expected_value - o) * b * (1 - o)
+    wi = n * (point.normalized_expected_value - o) * b * (1 - o ** 2)
     for ei in point.e:
         delta_w.append(wi * ei)
 
@@ -314,8 +369,21 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                 training_set.append(point_array[i])
             else:
                 evaluation_set.append(point_array[i])
+    elif perceptron_type == 'multi-layer-xor':
+        for i in range(len(x)):
+            arr = []
+            for p in x[i]:
+                arr.append(p)
+            point = declarations.Point(arr, y[i])
+            point_array.append(point)
+            dim = len(x[0])
+            training_set = point_array
 
-    perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
+    if perceptron_type == 'multi-layer-xor':
+        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, 2, 2)
+        print("Holis")
+    else:
+        perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
     print(perception)
     if perceptron_type == 'step':
@@ -324,6 +392,8 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         error = calculate_error_linear(evaluation_set, perception.w)
     if perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
         error = calculate_error_non_linear(evaluation_set, perception.w)
+    if perceptron_type == 'multi-layer-xor':
+        error = calculate_multi_layer_error(evaluation_set, perception, b)
     print(f"evaluation error: {error}")
 
     if perceptron_type == 'step':
