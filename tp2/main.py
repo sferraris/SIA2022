@@ -76,10 +76,10 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
         nodes = []
         for j in range(nodes_count):
             if i == 0:
-                w = numpy.random.uniform(-1, 1, dim)
+                w = numpy.random.uniform(-1, 1, dim + 1)
                 nodes.append(declarations.Node(n, w))
             else:
-                w = numpy.random.uniform(-1, 1, nodes_count)
+                w = numpy.random.uniform(-1, 1, nodes_count + 1)
                 nodes.append(declarations.Node(n, w))
         layers.append(declarations.Layer(nodes))
 
@@ -89,7 +89,6 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     multilayer_perceptron = declarations.MultilayerPerceptron(n, layers)
 
     while error_min > 0 and stop_index < cot:
-        print(stop_index)
         # 2 tomar ej al azar del conjunto de entrenamiento y aplciar para al capa 0
         m = random.randint(0, len(points) - 1)
         point = points[m]
@@ -98,13 +97,20 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
         layers = multilayer_perceptron.layers
         for i in range(len(layers)):
             layer = layers[i]
-            array = []
+            if i < len(layers):
+                array = [1]
+            else:
+                array = []
+
             for node in layer.nodes:
                 if i == 0:
                     h = calculate_excitement(point, node.w)
                 else:
                     h = calculate_excitement(layers[i - 1].point, node.w)
                 array.append(h)
+                if math.isnan(h):
+                    print(f"h is nan -> {array}")
+                    exit()
             layer.point.e = array
         # 4 calcular error para la capa de salida
         layer = layers[-1]
@@ -118,13 +124,13 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
             layer = layers[i]
             for j in range(len(layer.nodes)):
                 node = layer.nodes[j]
-                h = layer.point.e[j]
+                h = layer.point.e[j + 1]
                 if i + 1 == len(layers) - 1:
                     top_w = layers[i + 1].nodes[0].w
                     top_e = layers[i + 1].point.e[0]
                 else:
                     top_w = layers[i + 1].nodes[j].w
-                    top_e = layers[i + 1].point.e[j]
+                    top_e = layers[i + 1].point.e[j + 1]
 
                 error_array = calculate_o_derivative(h, b) * numpy.dot(top_w, top_e)
 
@@ -139,12 +145,17 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
         for j in range(len(layer.nodes)):
             node = layer.nodes[j]
             delta_w = n * numpy.dot(point.e, node.error)
-            node.w = numpy.sum([node.w, delta_w], axis=0)
+
+            w_array = []
+            for i in range(len(node.w)):
+                w_array.append(node.w[i] + delta_w[i])
+
+            node.w = w_array
 
         for i in range(len(layers) - 2):
             j = i + 1
             node = layer.nodes[j]
-            delta_w = n * numpy.dot(layers[i].point.e[j], node.error)  # TODO help
+            delta_w = n * numpy.dot(layers[i].point.e[j], node.error)
             node.w = numpy.sum([node.w, delta_w], axis=0)
 
         layer = layers[-1]
@@ -162,37 +173,85 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     return multilayer_perceptron
 
 
+def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float, layers_count: int, nodes_count: int):
+    error_matrix = []
+    stop_index = 0
+    error_min = math.inf
+    input_array = []
+    output_array = []
+
+    weight_matrix = init_weights(layers_count, nodes_count, dim)
+
+
+def init_weights(inner_layers: int, nodes_count: int, dim: int, output_nodes: int):
+    weights = {}
+    for j in range(inner_layers):
+        weights[j] = []
+        for i in range(nodes_count):
+            weights[j].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
+
+    weights[inner_layers] = []
+    for i in range(output_nodes):
+        weights[inner_layers].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
+
+    return weights
+
 def calculate_o(h: float, b: float):
     return math.tanh(b * h)
 
 
 def calculate_o_derivative(h: float, b: float):
-    return b * (1 - math.tanh(b * h) ** 2)
+    return b * (1 - calculate_o(h, b) ** 2)
 
 
-def calculate_multi_layer_error(points: [], perceptron: declarations.MultilayerPerceptron, b:float):
-    layer = perceptron.layers[-1]
+def calculate_multi_layer_error(points: [], perceptron: declarations.MultilayerPerceptron, b: float):
+    # layer = perceptron.layers[-1]
+    # error = 0
+    #
+    # prev_layer = perceptron.layers[-2]
+    # for point in points:
+    #    for node in layer.nodes:
+    #        o_array = []
+    #        for h in prev_layer.point.e:
+    #            o_array.append(calculate_o(h, b))
+    #
+    #        aux = numpy.dot(node.w, o_array)
+    #
+    #        #print(node.w)
+    #        #print(o_array)
+    #        #print(aux)
+    #        aux_sum = aux
+    #        error += (point.expected_value - calculate_o(aux_sum, b)) ** 2
+    #
+    # return error / 2
+    layers = perceptron.layers
     error = 0
-
-    prev_layer = perceptron.layers[-2]
+    array = []
     for point in points:
+        point_e_array = []
+        for i in range(len(layers) - 1):
+            layer = layers[i]
+            array = [1]
+            for node in layer.nodes:
+                if i == 0:
+                    h = calculate_excitement(point, node.w)
+                else:
+                    h = calculate_excitement(point_e_array[i - 1], node.w)
+                array.append(h)
+            point_e_array.append(declarations.Point(array, 0))
+        layer = layers[-1]
         for node in layer.nodes:
-            o_array = []
-            for h in prev_layer.point.e:
-                o_array.append(calculate_o(h, b))
-            aux = numpy.dot(node.w, o_array)
-
-            #print(node.w)
-            #print(o_array)
-            #print(aux)
-            aux_sum = aux
-            error += (point.expected_value - calculate_o(aux_sum, b)) ** 2
+            total_sum = 0
+            for i in range(len(node.w)):
+                total_sum += (node.w[i] * point_e_array[-1].e[i + 1])
+            error += (point.expected_value - calculate_o(total_sum, b)) ** 2
 
     return error / 2
 
 
 def calculate_excitement(point: declarations.Point, w: []):
     excitement = 0
+    # print(point.e)
     for i in range(len(w)):
         excitement += (point.e[i] * w[i])
 
@@ -371,16 +430,17 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                 evaluation_set.append(point_array[i])
     elif perceptron_type == 'multi-layer-xor':
         for i in range(len(x)):
-            arr = []
+            arr = [1]
             for p in x[i]:
                 arr.append(p)
             point = declarations.Point(arr, y[i])
             point_array.append(point)
             dim = len(x[0])
             training_set = point_array
+            evaluation_set = point_array
 
     if perceptron_type == 'multi-layer-xor':
-        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, 2, 2)
+        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, 5, 5)
         print("Holis")
     else:
         perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
