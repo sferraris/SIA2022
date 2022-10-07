@@ -1,10 +1,12 @@
 {
-  "cot": 1000,
+  "cot": 10000,
   "n": 0.01,
   "x": [ [-1, 1], [1, -1], [-1, -1], [1, 1]],
   "y": [-1, -1, -1, 1],
   "perceptron_type": "multi-layer-xor",
   "b": 1,
   "normalization_type": "z-score",
-  "config_by_code": false
+  "config_by_code": false,
+  "inner_layers" : 3,
+  "nodes_count" : 3
 }

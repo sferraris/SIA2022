@@ -180,6 +180,7 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     error_min = math.inf
 
     weights = init_weights(inner_layers, nodes_count, dim, output_nodes)
+    min_weights = copy.deepcopy(weights)
     while error_min > 0.001 and stop_index < cot:
         random_index = random.randint(0, len(points) - 1)
         point = points[random_index]
@@ -198,22 +199,30 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
 
         if error <= error_min:
             error_min = error
+            min_weights = copy.deepcopy(weights)
 
         stop_index += 1
 
-    return weights
+    print(error_min)
+    print(stop_index)
+
+    return min_weights
 
 
 def init_weights(inner_layers: int, nodes_count: int, dim: int, output_nodes: int):
     weights = {}
     for j in range(inner_layers):
         weights[j] = []
-        for i in range(nodes_count):
-            weights[j].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
+        if j == 0:
+            for i in range(nodes_count):
+                weights[j].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
+        else:
+            for i in range(nodes_count):
+                weights[j].append(numpy.random.uniform(-1, 1, size=(nodes_count + 1)))
 
     weights[inner_layers] = []
     for i in range(output_nodes):
-        weights[inner_layers].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
+        weights[inner_layers].append(numpy.random.uniform(-1, 1, size=(nodes_count + 1)))
 
     return weights
 
@@ -222,12 +231,12 @@ def p_forward(inner_layers: int, weights: {}, nodes_count: int, output_nodes: in
     h_dictionary = {}
     o_dictionary = {0: point.e}  # [1, -1, 1]
 
-    print("p_forward")
     for i in range(inner_layers + 1):
         if i == inner_layers:
             h_dictionary[i + 1] = []
             o_dictionary[i + 1] = []
             for j in range(output_nodes):
+
                 h_dictionary[i + 1].append(array_prod(o_dictionary[i], weights[i][j]))
                 o_dictionary[i + 1].append(calculate_o(h_dictionary[i + 1][j], b))
         else:
@@ -247,7 +256,6 @@ def p_back(h_dictionary: {}, output_array: [], inner_layers: int, weights: {}, n
            b: float, expected_value: float):
     error_dictionary = {}
 
-    print("p_back")
     for i in reversed(range(inner_layers + 1)):
         if i == inner_layers:
             subtract_array = numpy.subtract(expected_value, output_array)
@@ -257,13 +265,9 @@ def p_back(h_dictionary: {}, output_array: [], inner_layers: int, weights: {}, n
                 error_dictionary[i + 1].append(derivative * subtract_array[j])
         else:
             error_dictionary[i + 1] = []
-            print(weights[i + 1])
-            print(error_dictionary[i + 2])
             product_array = numpy.matmul(numpy.transpose(numpy.matrix(weights[i + 1])),
                                          numpy.transpose(numpy.matrix(error_dictionary[i + 2])))
             product_array_t = numpy.transpose(product_array)
-            print(f"print: {product_array_t[0][0]}")
-            print(f"print: {numpy.ravel(product_array_t)[0]}")
             for j in range(nodes_count):
                 derivative = calculate_o_derivative(h_dictionary[i + 1][j], b)
                 error_dictionary[i + 1].append(derivative * numpy.ravel(product_array_t)[j + 1])
@@ -278,7 +282,7 @@ def calculate_delta_w(o_dictionary: {}, error_dictionary: {}, n: float, inner_la
         delta_w_dictionary[i + 1] = []
         count = nodes_count if i != inner_layers else output_nodes
         for j in range(count):
-            delta_w_dictionary[i + 1].append(n * o_dictionary[i][j] * error_dictionary[i + 1][j])
+            delta_w_dictionary[i + 1].append(n * o_dictionary[i + 1][j] * error_dictionary[i + 1][j])
 
     return delta_w_dictionary
 
@@ -287,7 +291,7 @@ def calculate_new_weights(delta_w_dictionary: {}, weights: {}, inner_layers: int
     for i in range(inner_layers + 1):
         count = nodes_count if i != inner_layers else output_nodes
         for j in range(count):
-            weights[i + 1][j] += delta_w_dictionary[i + 1][j]
+            weights[i][j] += delta_w_dictionary[i + 1][j]
 
     return weights
 
@@ -434,7 +438,7 @@ def calculate_error_non_linear(points: [], w: []):
     return error * 1 / 2
 
 
-def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear'):
+def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2, nodes_count = 2):
     config_file = open("config.json")
     config_data = json.load(config_file)
     if not config_data['config_by_code']:
@@ -443,6 +447,8 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         x = config_data["x"]
         y = config_data["y"]
         b = config_data["b"]
+        inner_layers = config_data["inner_layers"]
+        nodes_count = config_data["nodes_count"]
         normalization = config_data['normalization_type']
         perceptron_type = config_data["perceptron_type"]
 
@@ -515,7 +521,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             evaluation_set = point_array
 
     if perceptron_type == 'multi-layer-xor':
-        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, 2, 2, 1)
+        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers, nodes_count, 1)
     else:
         perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
@@ -527,7 +533,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     if perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
         error = calculate_error_non_linear(evaluation_set, perception.w)
     if perceptron_type == 'multi-layer-xor':
-        error = calculate_multi_layer_error(evaluation_set, 2, perception, 2, 1, b)
+        error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, 1, b)
     print(f"evaluation error: {error}")
 
     if perceptron_type == 'step':
