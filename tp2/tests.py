@@ -3,7 +3,7 @@ import numpy
 def tests():
     inner_layers = 2
     nodes_count = 2
-    dim = 3
+    dim = 2
     output_nodes = 1
 
 
@@ -16,6 +16,12 @@ def tests():
     weights[inner_layers] = []
     for i in range(output_nodes):
         weights[inner_layers].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
+
+
+    arr1 = [1, 2, 3]
+    value = [1]
+    print(arr1[1:])
+    print(arr1)
 
 
 

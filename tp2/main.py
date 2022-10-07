@@ -8,6 +8,7 @@ import numpy
 import matplotlib
 import csv
 from mpl_toolkits import mplot3d
+from declarations import Point
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -66,8 +67,8 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     return perceptron
 
 
-def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float,
-                               layers_count: int, nodes_count: int):
+def multi_layer_perceptron_run_old(points: [], n: float, cot: int, dim: int, b: float,
+                                   layers_count: int, nodes_count: int):
     stop_index = 0
     error_min = math.inf
     layers = []
@@ -173,14 +174,34 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     return multilayer_perceptron
 
 
-def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float, layers_count: int, nodes_count: int):
-    error_matrix = []
+def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float, inner_layers: int, nodes_count: int,
+                               output_nodes: int):
     stop_index = 0
     error_min = math.inf
-    input_array = []
-    output_array = []
 
-    weight_matrix = init_weights(layers_count, nodes_count, dim)
+    weights = init_weights(inner_layers, nodes_count, dim, output_nodes)
+    while error_min > 0.001 and stop_index < cot:
+        random_index = random.randint(0, len(points) - 1)
+        point = points[random_index]
+
+        h_dictionary, o_dictionary = p_forward(inner_layers, weights, nodes_count, output_nodes, point, b)
+
+        error_dictionary = p_back(h_dictionary, o_dictionary[inner_layers + 1], inner_layers, weights, nodes_count,
+                                  output_nodes, b, point.expected_value)
+
+        delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, inner_layers, nodes_count,
+                                               output_nodes)
+
+        weights = calculate_new_weights(delta_w_dictionary, weights, inner_layers, nodes_count, output_nodes)
+
+        error = calculate_multi_layer_error(points, inner_layers, weights, nodes_count, output_nodes, b)
+
+        if error <= error_min:
+            error_min = error
+
+        stop_index += 1
+
+    return weights
 
 
 def init_weights(inner_layers: int, nodes_count: int, dim: int, output_nodes: int):
@@ -196,6 +217,93 @@ def init_weights(inner_layers: int, nodes_count: int, dim: int, output_nodes: in
 
     return weights
 
+
+def p_forward(inner_layers: int, weights: {}, nodes_count: int, output_nodes: int, point: Point, b: float):
+    h_dictionary = {}
+    o_dictionary = {0: point.e}  # [1, -1, 1]
+
+    print("p_forward")
+    for i in range(inner_layers + 1):
+        if i == inner_layers:
+            h_dictionary[i + 1] = []
+            o_dictionary[i + 1] = []
+            for j in range(output_nodes):
+                h_dictionary[i + 1].append(array_prod(o_dictionary[i], weights[i][j]))
+                o_dictionary[i + 1].append(calculate_o(h_dictionary[i + 1][j], b))
+        else:
+            h_dictionary[i + 1] = []  # [1, o1, o2]
+            o_dictionary[i + 1] = []
+            o_dictionary[i + 1].append(1)
+            for j in range(nodes_count):
+                h_dictionary[i + 1].append(array_prod(o_dictionary[i], weights[i][j]))
+                o_dictionary[i + 1].append(calculate_o(h_dictionary[i + 1][j], b))
+    # el o_dictionary tiene las entradas de los nodos. Para la primer layer, tiene un punto que arranca con 1. Para las
+    # demas, tiene la funcion de activacion( producto de las h * los weights) y un 1 appendeado al principio
+
+    return h_dictionary, o_dictionary
+
+
+def p_back(h_dictionary: {}, output_array: [], inner_layers: int, weights: {}, nodes_count: int, output_nodes: int,
+           b: float, expected_value: float):
+    error_dictionary = {}
+
+    print("p_back")
+    for i in reversed(range(inner_layers + 1)):
+        if i == inner_layers:
+            subtract_array = numpy.subtract(expected_value, output_array)
+            error_dictionary[i + 1] = []
+            for j in range(output_nodes):
+                derivative = calculate_o_derivative(h_dictionary[i + 1][j], b)
+                error_dictionary[i + 1].append(derivative * subtract_array[j])
+        else:
+            error_dictionary[i + 1] = []
+            print(weights[i + 1])
+            print(error_dictionary[i + 2])
+            product_array = numpy.matmul(numpy.transpose(numpy.matrix(weights[i + 1])),
+                                         numpy.transpose(numpy.matrix(error_dictionary[i + 2])))
+            product_array_t = numpy.transpose(product_array)
+            print(f"print: {product_array_t[0][0]}")
+            print(f"print: {numpy.ravel(product_array_t)[0]}")
+            for j in range(nodes_count):
+                derivative = calculate_o_derivative(h_dictionary[i + 1][j], b)
+                error_dictionary[i + 1].append(derivative * numpy.ravel(product_array_t)[j + 1])
+
+    return error_dictionary
+
+
+def calculate_delta_w(o_dictionary: {}, error_dictionary: {}, n: float, inner_layers: int, nodes_count: int,
+                      output_nodes: int):
+    delta_w_dictionary = {}
+    for i in range(inner_layers + 1):
+        delta_w_dictionary[i + 1] = []
+        count = nodes_count if i != inner_layers else output_nodes
+        for j in range(count):
+            delta_w_dictionary[i + 1].append(n * o_dictionary[i][j] * error_dictionary[i + 1][j])
+
+    return delta_w_dictionary
+
+
+def calculate_new_weights(delta_w_dictionary: {}, weights: {}, inner_layers: int, nodes_count: int, output_nodes: int):
+    for i in range(inner_layers + 1):
+        count = nodes_count if i != inner_layers else output_nodes
+        for j in range(count):
+            weights[i + 1][j] += delta_w_dictionary[i + 1][j]
+
+    return weights
+
+
+def calculate_multi_layer_error(points: [], inner_layers: int, weights: {}, nodes_count: int, output_nodes: int,
+                                b: float):
+    total_error = 0
+    for point in points:
+        h_dictionary, o_dictionary = p_forward(inner_layers, weights, nodes_count, output_nodes, point, b)
+        # TODO normalize
+        for i in range(output_nodes):
+            total_error += (point.expected_value - o_dictionary[inner_layers + 1][i]) ** 2
+
+    return total_error / len(points)
+
+
 def calculate_o(h: float, b: float):
     return math.tanh(b * h)
 
@@ -204,49 +312,16 @@ def calculate_o_derivative(h: float, b: float):
     return b * (1 - calculate_o(h, b) ** 2)
 
 
-def calculate_multi_layer_error(points: [], perceptron: declarations.MultilayerPerceptron, b: float):
-    # layer = perceptron.layers[-1]
-    # error = 0
-    #
-    # prev_layer = perceptron.layers[-2]
-    # for point in points:
-    #    for node in layer.nodes:
-    #        o_array = []
-    #        for h in prev_layer.point.e:
-    #            o_array.append(calculate_o(h, b))
-    #
-    #        aux = numpy.dot(node.w, o_array)
-    #
-    #        #print(node.w)
-    #        #print(o_array)
-    #        #print(aux)
-    #        aux_sum = aux
-    #        error += (point.expected_value - calculate_o(aux_sum, b)) ** 2
-    #
-    # return error / 2
-    layers = perceptron.layers
-    error = 0
-    array = []
-    for point in points:
-        point_e_array = []
-        for i in range(len(layers) - 1):
-            layer = layers[i]
-            array = [1]
-            for node in layer.nodes:
-                if i == 0:
-                    h = calculate_excitement(point, node.w)
-                else:
-                    h = calculate_excitement(point_e_array[i - 1], node.w)
-                array.append(h)
-            point_e_array.append(declarations.Point(array, 0))
-        layer = layers[-1]
-        for node in layer.nodes:
-            total_sum = 0
-            for i in range(len(node.w)):
-                total_sum += (node.w[i] * point_e_array[-1].e[i + 1])
-            error += (point.expected_value - calculate_o(total_sum, b)) ** 2
-
-    return error / 2
+def array_prod(arr1: [], arr2: []):
+    if len(arr1) != len(arr2):
+        print(f"arr1: {arr1}")
+        print(f"arr2: {arr2}")
+        print("Array dim error")
+        exit()
+    arr_sum = 0
+    for i in range(len(arr1)):
+        arr_sum += (arr1[i] * arr2[i])
+    return arr_sum
 
 
 def calculate_excitement(point: declarations.Point, w: []):
@@ -440,8 +515,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             evaluation_set = point_array
 
     if perceptron_type == 'multi-layer-xor':
-        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, 5, 5)
-        print("Holis")
+        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, 2, 2, 1)
     else:
         perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
@@ -453,7 +527,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     if perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
         error = calculate_error_non_linear(evaluation_set, perception.w)
     if perceptron_type == 'multi-layer-xor':
-        error = calculate_multi_layer_error(evaluation_set, perception, b)
+        error = calculate_multi_layer_error(evaluation_set, 2, perception, 2, 1, b)
     print(f"evaluation error: {error}")
 
     if perceptron_type == 'step':
