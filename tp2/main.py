@@ -232,19 +232,18 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
 
                 weights = calculate_new_weights(delta_w_dictionary, weights, inner_layers, nodes_count, output_nodes)
             else:
-                old_weights = copy.deepcopy(weights)
                 delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, inner_layers, nodes_count,
                                                        output_nodes, dim)
                 for i in range(len(delta_w_dictionary)):
                     for j in range(len(delta_w_dictionary[i + 1])):
                         for z in range(len(delta_w_dictionary[i + 1][j])):
-                            mt[i + 1][j][z] = betha1 * mt[i + 1][j][z] + (1 - betha1) * delta_w_dictionary[i + 1][j][z]
+                            mt[i + 1][j][z] = betha1 * mt[i + 1][j][z] + (1 - betha1) * -1 * delta_w_dictionary[i + 1][j][z]
                             vt[i + 1][j][z] = betha2 * vt[i + 1][j][z] + (1 - betha2) * (
                                     delta_w_dictionary[i + 1][j][z] ** 2)
                             mt_corrected[i + 1][j][z] = mt[i + 1][j][z] / (1 - betha1 ** t)
                             vt_corrected[i + 1][j][z] = vt[i + 1][j][z] / (1 - betha2 ** t)
-                            weights[i][j][z] = old_weights[i][j][z] - alpha_adam * mt_corrected[i + 1][j][z] / (
-                                    vt_corrected[i + 1][j][z] + e)
+                            weights[i][j][z] = weights[i][j][z] - alpha_adam * mt_corrected[i + 1][j][z] / (
+                                    math.sqrt(vt_corrected[i + 1][j][z]) + e)
 
             last_error = error
             error = calculate_multi_layer_error(points, inner_layers, weights, nodes_count, output_nodes, b)
