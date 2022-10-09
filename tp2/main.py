@@ -187,7 +187,8 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     t = 0
     mt = {}
     weights = init_weights(inner_layers, nodes_count, dim, output_nodes)
-
+    errors = []
+    epocas = []
     for i in range(len(weights)):
         mt[i + 1] = []
         for j in range(len(weights[i])):
@@ -198,16 +199,16 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     mt_corrected = copy.deepcopy(mt)
     vt_corrected = copy.deepcopy(mt)
 
-
     min_weights = copy.deepcopy(weights)
     delta_w_dictionary = {}
     error = 0
     error_progress = 0
     last_error = 0
-    while error_min > 0.0000000 and stop_index < cot:
+    while error_min > 1E-3 and stop_index < cot:
         indexes = list(range(len(points)))
         numpy.random.shuffle(indexes)
         # random_index = random.randint(0, len(points) - 1)
+        epocas.append(stop_index)
         for random_index in indexes:
             t += 1
             point = points[random_index]
@@ -220,15 +221,14 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
                 if momentum and stop_index > 0:
                     delta_w_old = copy.deepcopy(delta_w_dictionary)
                     delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, inner_layers, nodes_count,
-                                                       output_nodes, dim)
+                                                           output_nodes, dim)
                     for i in range(len(delta_w_dictionary)):
-                        for j in range(len(delta_w_dictionary[i+1])):
-                            for z in range(len(delta_w_dictionary[i+1][j])):
-                                delta_w_dictionary[i+1][j][z] += delta_w_old[i+1][j][z] * alpha
+                        for j in range(len(delta_w_dictionary[i + 1])):
+                            for z in range(len(delta_w_dictionary[i + 1][j])):
+                                delta_w_dictionary[i + 1][j][z] += delta_w_old[i + 1][j][z] * alpha
                 else:
                     delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, inner_layers, nodes_count,
                                                            output_nodes, dim)
-
 
                 weights = calculate_new_weights(delta_w_dictionary, weights, inner_layers, nodes_count, output_nodes)
             else:
@@ -239,10 +239,12 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
                     for j in range(len(delta_w_dictionary[i + 1])):
                         for z in range(len(delta_w_dictionary[i + 1][j])):
                             mt[i + 1][j][z] = betha1 * mt[i + 1][j][z] + (1 - betha1) * delta_w_dictionary[i + 1][j][z]
-                            vt[i + 1][j][z] = betha2 * vt[i + 1][j][z] + (1 - betha2) * (delta_w_dictionary[i + 1][j][z] ** 2)
+                            vt[i + 1][j][z] = betha2 * vt[i + 1][j][z] + (1 - betha2) * (
+                                    delta_w_dictionary[i + 1][j][z] ** 2)
                             mt_corrected[i + 1][j][z] = mt[i + 1][j][z] / (1 - betha1 ** t)
                             vt_corrected[i + 1][j][z] = vt[i + 1][j][z] / (1 - betha2 ** t)
-                            weights[i][j][z] = old_weights[i][j][z] - alpha_adam * mt_corrected[i + 1][j][z] / (vt_corrected[i + 1][j][z] + e)
+                            weights[i][j][z] = old_weights[i][j][z] - alpha_adam * mt_corrected[i + 1][j][z] / (
+                                    vt_corrected[i + 1][j][z] + e)
 
             last_error = error
             error = calculate_multi_layer_error(points, inner_layers, weights, nodes_count, output_nodes, b)
@@ -264,13 +266,13 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
             if error <= error_min:
                 error_min = error
                 min_weights = copy.deepcopy(weights)
-
+        errors.append(error)
         stop_index += 1
 
     print(error_min)
     print(stop_index)
 
-    return min_weights
+    return min_weights, errors, epocas
 
 
 def init_weights(inner_layers: int, nodes_count: int, dim: int, output_nodes: int):
@@ -382,6 +384,8 @@ def calculate_multi_layer_error(points: [], inner_layers: int, weights: {}, node
     for point in points:
         h_dictionary, o_dictionary = p_forward(inner_layers, weights, nodes_count, output_nodes, point, b)
         # TODO normalize
+        # print(f" out: {o_dictionary[inner_layers + 1]}")
+        # print(f" expected: {point.expected_value}")
         for i in range(output_nodes):
             total_error += (point.expected_value - o_dictionary[inner_layers + 1][i]) ** 2
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
@@ -526,7 +530,7 @@ def calculate_error_non_linear(points: [], w: [], perceptron_type: str, b: float
 
 
 def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2,
-        nodes_count=2):
+        nodes_count=2, momentum=False, adaptative=False, adam=False):
     config_file = open("config.json")
     config_data = json.load(config_file)
     if not config_data['config_by_code']:
@@ -542,6 +546,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         momentum = config_data["momentum"]
         adaptative = config_data["adaptative"]
         adam = config_data["adam"]
+
 
     point_array = []
     training_set = []
@@ -624,7 +629,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             for ni in numbers:
                 number.append(int(ni))
             if (i + 1) % 7 == 0:
-                expected = 1 if len(points) % 2 == 0 else -1
+                expected = 1 if len(points) % 2 == 0 else -1  # Valor esperado un array
                 points.append(declarations.Point(number, expected))
                 number = [1]
         if perceptron_type == 'non-linear-logistic':
@@ -657,18 +662,19 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             # if perceptron_type == 'non-linear-tan':
             point.expected_value = (point.expected_value * 2 / 9) - 1
         for i in range(len(points)):
-            if i < len(points) * 0.5:
+            if i % 2 == 0:
                 training_set.append(points[i])
             else:
                 evaluation_set.append(points[i])
 
     if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
             or perceptron_type == 'multi-layer-number':
-        perception = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers, nodes_count, 1, momentum, adaptative, adam)
+        perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers, nodes_count,
+                                                                1, momentum, adaptative, adam)
     else:
         perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
-    #print(perception)
+    # print(perception)
     if perceptron_type == 'step':
         error = calculate_error_step(evaluation_set, perception.w)
     if perceptron_type == 'linear':
@@ -695,7 +701,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             plt.scatter(point.e[1], point.e[2], color=color)
         plt.show()
 
-    return perception, error
+    return perception, error, errors, epocas
 
 
 if __name__ == "__main__":
