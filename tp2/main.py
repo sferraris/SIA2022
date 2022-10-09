@@ -67,113 +67,6 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     return perceptron
 
 
-def multi_layer_perceptron_run_old(points: [], n: float, cot: int, dim: int, b: float,
-                                   layers_count: int, nodes_count: int):
-    stop_index = 0
-    error_min = math.inf
-    layers = []
-    # 1 inicializar $
-    for i in range(layers_count):
-        nodes = []
-        for j in range(nodes_count):
-            if i == 0:
-                w = numpy.random.uniform(-1, 1, dim + 1)
-                nodes.append(declarations.Node(n, w))
-            else:
-                w = numpy.random.uniform(-1, 1, nodes_count + 1)
-                nodes.append(declarations.Node(n, w))
-        layers.append(declarations.Layer(nodes))
-
-    w = numpy.random.uniform(-1, 1, nodes_count)
-    nodes = [declarations.Node(n, w)]
-    layers.append(declarations.Layer(nodes))
-    multilayer_perceptron = declarations.MultilayerPerceptron(n, layers)
-
-    while error_min > 0 and stop_index < cot:
-        # 2 tomar ej al azar del conjunto de entrenamiento y aplciar para al capa 0
-        m = random.randint(0, len(points) - 1)
-        point = points[m]
-        # h = calculate_excitement(points[m], perceptron.w)
-        # 3 propagar la entrada hasta la capa de salida
-        layers = multilayer_perceptron.layers
-        for i in range(len(layers)):
-            layer = layers[i]
-            if i < len(layers):
-                array = [1]
-            else:
-                array = []
-
-            for node in layer.nodes:
-                if i == 0:
-                    h = calculate_excitement(point, node.w)
-                else:
-                    h = calculate_excitement(layers[i - 1].point, node.w)
-                array.append(h)
-                if math.isnan(h):
-                    print(f"h is nan -> {array}")
-                    exit()
-            layer.point.e = array
-        # 4 calcular error para la capa de salida
-        layer = layers[-1]
-        for node in layer.nodes:
-            h = layer.point.e[0]
-            error = (point.expected_value - calculate_o(h, b)) * calculate_o_derivative(h, b)
-            node.error = error
-
-        # 5 retropropagar n entre 2 y N
-        for i in reversed(range(len(layers) - 1)):
-            layer = layers[i]
-            for j in range(len(layer.nodes)):
-                node = layer.nodes[j]
-                h = layer.point.e[j + 1]
-                if i + 1 == len(layers) - 1:
-                    top_w = layers[i + 1].nodes[0].w
-                    top_e = layers[i + 1].point.e[0]
-                else:
-                    top_w = layers[i + 1].nodes[j].w
-                    top_e = layers[i + 1].point.e[j + 1]
-
-                error_array = calculate_o_derivative(h, b) * numpy.dot(top_w, top_e)
-
-                error = 0
-                for e in error_array:
-                    error += e
-
-                node.error = error
-
-        # 6 actualizar los $ de las conexiones
-        layer = layers[0]
-        for j in range(len(layer.nodes)):
-            node = layer.nodes[j]
-            delta_w = n * numpy.dot(point.e, node.error)
-
-            w_array = []
-            for i in range(len(node.w)):
-                w_array.append(node.w[i] + delta_w[i])
-
-            node.w = w_array
-
-        for i in range(len(layers) - 2):
-            j = i + 1
-            node = layer.nodes[j]
-            delta_w = n * numpy.dot(layers[i].point.e[j], node.error)
-            node.w = numpy.sum([node.w, delta_w], axis=0)
-
-        layer = layers[-1]
-        for j in range(len(layer.nodes)):
-            node = layer.nodes[j]
-            delta_w = n * numpy.dot(layers[-2].point.e[j], node.error)
-            node.w = numpy.sum([node.w, delta_w], axis=0)
-        # 7 calcular el error
-        error = calculate_multi_layer_error(points, multilayer_perceptron, b)
-        if error <= error_min:
-            error_min = error
-
-        stop_index += 1
-
-    return multilayer_perceptron
-
-
 def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float, inner_layers: int, nodes_count: int,
                                output_nodes: int, momentum: bool, adaptative: bool, adam: bool):
     stop_index = 0
@@ -237,7 +130,8 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
                 for i in range(len(delta_w_dictionary)):
                     for j in range(len(delta_w_dictionary[i + 1])):
                         for z in range(len(delta_w_dictionary[i + 1][j])):
-                            mt[i + 1][j][z] = betha1 * mt[i + 1][j][z] + (1 - betha1) * -1 * delta_w_dictionary[i + 1][j][z]
+                            mt[i + 1][j][z] = betha1 * mt[i + 1][j][z] + (1 - betha1) * -1 * \
+                                              delta_w_dictionary[i + 1][j][z]
                             vt[i + 1][j][z] = betha2 * vt[i + 1][j][z] + (1 - betha2) * (
                                     delta_w_dictionary[i + 1][j][z] ** 2)
                             mt_corrected[i + 1][j][z] = mt[i + 1][j][z] / (1 - betha1 ** t)
@@ -528,8 +422,39 @@ def calculate_error_non_linear(points: [], w: [], perceptron_type: str, b: float
     return error * 1 / 2
 
 
+def crossover_selection_method(points: [], k):
+    point_dictionary = {}
+
+    point_length = int(len(points) / k)
+    indexes = list(range(len(points)))
+    numpy.random.shuffle(indexes)
+
+    idx_counter = 0
+    for idx in range(k):
+        point_dictionary[idx] = []
+        for k_idx in range(point_length):
+            point_dictionary[idx].append(points[indexes[idx_counter]])
+            idx_counter += 1
+
+
+    return point_dictionary
+
+
+def other_selection_method(points: [], k):
+    training_set = []
+    evaluation_set = []
+
+    for i in range(len(points)):
+        if i < len(points) * k:
+            training_set.append(points[i])
+        else:
+            evaluation_set.append(points[i])
+
+    return training_set, evaluation_set
+
+
 def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2,
-        nodes_count=2, momentum=False, adaptative=False, adam=False):
+        nodes_count=2, momentum=False, adaptative=False, adam=False, cross_validation=False, k=1):
     config_file = open("config.json")
     config_data = json.load(config_file)
     if not config_data['config_by_code']:
@@ -545,11 +470,14 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         momentum = config_data["momentum"]
         adaptative = config_data["adaptative"]
         adam = config_data["adam"]
-
+        cross_validation = config_data["cross_validation"]
 
     point_array = []
     training_set = []
     evaluation_set = []
+    point_set = {}
+    errors = []
+    epocas = []
     dim = 0
     if perceptron_type == 'step':
         for i in range(len(x)):
@@ -600,10 +528,10 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                     point_array[i].normalized_expected_value = (point_array[i].expected_value - min_expected_value) / r
             if normalization == 'z-score':
                 point_array[i].normalized_expected_value = (point_array[i].expected_value - mean) / standard_deviation
-            if i < len(point_array) * 0.5:
-                training_set.append(point_array[i])
-            else:
-                evaluation_set.append(point_array[i])
+        if cross_validation:
+            point_set = crossover_selection_method(point_array, k)
+        else:
+            training_set, evaluation_set = other_selection_method(point_array, 0.5)
     elif perceptron_type == 'multi-layer-xor':
         for i in range(len(x)):
             arr = [1]
@@ -634,11 +562,10 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         if perceptron_type == 'non-linear-logistic':
             for point in points:
                 point.expected_value = (point.expected_value - (-1)) / 2
-        for i in range(len(points)):
-            if i < len(points) * 0.5:
-                training_set.append(points[i])
-            else:
-                evaluation_set.append(points[i])
+        if cross_validation:
+            point_set = crossover_selection_method(points, k)
+        else:
+            training_set, evaluation_set = other_selection_method(points, 0.5)
 
     elif perceptron_type == 'multi-layer-number':
         file = open('TP2-ej3-digitos.txt')
@@ -660,18 +587,29 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             #    point.expected_value = point.expected_value / 9
             # if perceptron_type == 'non-linear-tan':
             point.expected_value = (point.expected_value * 2 / 9) - 1
-        for i in range(len(points)):
-            if i % 2 == 0:
-                training_set.append(points[i])
-            else:
-                evaluation_set.append(points[i])
+        if cross_validation:
+            point_set = crossover_selection_method(points, k)
+        else:
+            training_set, evaluation_set = other_selection_method(points, 0.5)
 
-    if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
-            or perceptron_type == 'multi-layer-number':
-        perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers, nodes_count,
-                                                                1, momentum, adaptative, adam)
+    if not cross_validation:
+        if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
+                or perceptron_type == 'multi-layer-number':
+            perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers, nodes_count,
+                                                                    1, momentum, adaptative, adam)
+        else:
+            perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
     else:
-        perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
+        min_error = math.inf
+        min_weights = {}
+        for k_idx in range(k):
+            evaluation_set = point_set[k_idx]
+            for set_idx in range(len(point_set)):
+                if not set_idx == k_idx:
+                    training_set += point_set[set_idx]
+            perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
+                                                                    nodes_count, 1, momentum, adaptative, adam)
+            
 
     # print(perception)
     if perceptron_type == 'step':

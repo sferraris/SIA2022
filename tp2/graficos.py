@@ -78,8 +78,8 @@ def inner_layers():
 def main():
     # error_vs_n()
     #inner_layers()
-    weight, error, errors, epocas = run(1000, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
-                        'multi-layer-even', 5, 5, False, False, False)
+    weight, error, errors, epocas = run(300, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
+                        'multi-layer-even', 10, 10, True, False, False)
     fig, ax = plt.subplots()
     ax.errorbar(epocas, errors,
                 xerr=numpy.zeros(len(epocas)),

@@ -6,10 +6,12 @@
   "perceptron_type": "multi-layer-even",
   "b": 1,
   "normalization_type": "scale",
-  "config_by_code": false,
-  "inner_layers" : 1,
-  "nodes_count" : 1,
+  "config_by_code": true,
+  "inner_layers" : 4,
+  "nodes_count" : 4,
   "momentum" : false,
   "adaptative": false,
-  "adam" : false
+  "adam" : true,
+  "cross_validation": false,
+  "k" : 4
 }

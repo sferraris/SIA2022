@@ -1,4 +1,6 @@
 import numpy
+from numpy import split
+
 
 def tests():
     inner_layers = 2
@@ -17,15 +19,29 @@ def tests():
     for i in range(output_nodes):
         weights[inner_layers].append(numpy.random.uniform(-1, 1, size=(dim + 1)))
 
+    point_dictionary = {}
+    points = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    k = 3
 
-    arr1 = [1, 2, 3]
-    value = [1]
-    print(arr1[1:])
+    point_length = int(len(points) / k)
+    indexes = list(range(len(points)))
+    numpy.random.shuffle(indexes)
+
+    idx_counter = 0
+    for idx in range(k):
+        point_dictionary[idx] = []
+        for k_idx in range(point_length):
+            point_dictionary[idx].append(points[indexes[idx_counter]])
+            idx_counter += 1
+
+
+    arr1 = []
+    arr2 = [1, 2, 3]
+    arr1 += arr2
+    arr1 += points
     print(arr1)
 
-
-
-    print(weights)
+    print(point_dictionary)
 
 if __name__ == "__main__":
     tests()
