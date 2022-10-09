@@ -62,8 +62,8 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
             w_min = new_w
         i += 1
     perceptron.w = w_min
-    print(f"i: {i}")
-    print(f"error: {error_min}")
+    print(f"epocas: {i}")
+    print(f"min training error: {error_min}")
     return perceptron
 
 
@@ -162,8 +162,8 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
         errors.append(error)
         stop_index += 1
 
-    print(error_min)
-    print(stop_index)
+    print(f"epocas: {stop_index}")
+    print(f"min training error: {error_min}")
 
     return min_weights, errors, epocas
 
@@ -453,6 +453,43 @@ def other_selection_method(points: [], k):
     return training_set, evaluation_set
 
 
+def accuracy_multi_layer(weights: {}, points: [], inner_layers: int, nodes_count: int, output_nodes: int, b: float):
+    epsilon = 0.1
+    win = 0
+
+    for point in points:
+        h_dictionary, o_dictionary = p_forward(inner_layers, weights, nodes_count, output_nodes, point, b)
+        # TODO normalize
+        # print(f" out: {o_dictionary[inner_layers + 1]}")
+        # print(f" expected: {point.expected_value}")
+        for i in range(output_nodes):
+            if o_dictionary[inner_layers + 1][i] - epsilon < point.expected_value < o_dictionary[inner_layers + 1][i] + epsilon:
+                win += 1
+        # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
+    return win/len(points)
+
+
+def accuracy(weights: [], points: [], perceptron_type: str, b: float):
+    epsilon = 0.1
+    win = 0
+
+    for point in points:
+        h = calculate_excitement(point, weights)
+        o = h
+        if perceptron_type == 'non-linear-tan':
+            o = math.tanh(h * b)
+        elif perceptron_type == 'non-linear-logistic':
+            o = 1 / (1 + math.e ** (-2 * b * h))
+        # print(f"h: {h}, point: {point}")
+        if perceptron_type == 'linear':
+            if o - epsilon < point.expected_value < o + epsilon:
+                win += 1
+        else:
+            if o - epsilon < point.normalized_expected_value < o + epsilon:
+                win += 1
+
+    return win/len(points)
+
 def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2,
         nodes_count=2, momentum=False, adaptative=False, adam=False, cross_validation=False, k=1):
     config_file = open("config.json")
@@ -463,6 +500,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         x = config_data["x"]
         y = config_data["y"]
         b = config_data["b"]
+        k = config_data["k"]
         inner_layers = config_data["inner_layers"]
         nodes_count = config_data["nodes_count"]
         normalization = config_data['normalization_type']
@@ -592,51 +630,59 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         else:
             training_set, evaluation_set = other_selection_method(points, 0.5)
 
-    if not cross_validation:
+    if not cross_validation or perceptron_type == 'step' or perceptron_type == 'multi-layer-xor':
         if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
                 or perceptron_type == 'multi-layer-number':
-            perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers, nodes_count,
-                                                                    1, momentum, adaptative, adam)
+            perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
+                                                                    nodes_count, 1, momentum, adaptative, adam)
         else:
             perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
     else:
         min_error = math.inf
         min_weights = {}
+        print("iteraciones cross_validation")
         for k_idx in range(k):
+            print(f"\nindex: {k_idx}")
             evaluation_set = point_set[k_idx]
             for set_idx in range(len(point_set)):
                 if not set_idx == k_idx:
                     training_set += point_set[set_idx]
-            perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
-                                                                    nodes_count, 1, momentum, adaptative, adam)
-            
+            if  perceptron_type == 'multi-layer-even' or perceptron_type == 'multi-layer-number':
+                perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
+                                                                        nodes_count,
+                                                                        1, momentum, adaptative, adam)
+            else:
+                perception = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
+
+            if perceptron_type == 'linear':
+                error = calculate_error_linear(evaluation_set, perception.w)
+            if perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
+                error = calculate_error_non_linear(evaluation_set, perception.w, perceptron_type, b)
+            if perceptron_type == 'multi-layer-even'  or perceptron_type == 'multi-layer-number':
+                error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, 1, b)
+            if error < min_error:
+                min_error = error
+                min_weights = copy.deepcopy(perception)
+        print("")
+        perception = min_weights
 
     # print(perception)
     if perceptron_type == 'step':
         error = calculate_error_step(evaluation_set, perception.w)
     if perceptron_type == 'linear':
         error = calculate_error_linear(evaluation_set, perception.w)
+        print(f"accuracy evaluation set: {accuracy(perception.w, evaluation_set, perceptron_type, b)}")
+        print(f"accuracy train: {accuracy(perception.w, training_set, perceptron_type, b)}")
     if perceptron_type == 'non-linear-tan' or perceptron_type == 'non-linear-logistic':
         error = calculate_error_non_linear(evaluation_set, perception.w, perceptron_type, b)
+        print(f"accuracy evaluation set: {accuracy(perception.w, evaluation_set, perceptron_type, b)}")
+        print(f"accuracy train: {accuracy(perception.w, training_set, perceptron_type, b)}")
     if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
             or perceptron_type == 'multi-layer-number':
         error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, 1, b)
+        print(f"accuracy evaluation set: {accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, 1, b)}")
+        print(f"accuracy train: {accuracy_multi_layer(perception, training_set, inner_layers, nodes_count, 1, b)}")
     print(f"evaluation error: {error}")
-
-    if perceptron_type == 'step':
-        print(f"y = {perception.w[1] / (-1 * perception.w[2])} * x + {perception.w[0] / (-1 * perception.w[2])}")
-
-        x = numpy.linspace(-5, 5, 100)
-        div = (-1 * perception.w[2])
-        y = perception.w[1] / div * x + perception.w[0] / div
-        plt.plot(x, y, '-r')
-
-        for point in point_array:
-            color = 'red'
-            if point.expected_value == -1:
-                color = 'black'
-            plt.scatter(point.e[1], point.e[2], color=color)
-        plt.show()
 
     return perception, error, errors, epocas
 

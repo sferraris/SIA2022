@@ -1,17 +1,17 @@
 {
-  "cot": 300,
+  "cot": 1000,
   "n": 0.1,
   "x": [ [-1, 1], [1, -1], [-1, -1], [1, 1]],
   "y": [1, 1, -1, -1],
-  "perceptron_type": "multi-layer-even",
+  "perceptron_type": "multi-layer-number",
   "b": 1,
   "normalization_type": "scale",
-  "config_by_code": true,
+  "config_by_code": false,
   "inner_layers" : 4,
   "nodes_count" : 4,
-  "momentum" : false,
+  "momentum" : true,
   "adaptative": false,
-  "adam" : true,
-  "cross_validation": false,
-  "k" : 4
+  "adam" : false,
+  "cross_validation": true,
+  "k" : 5
 }
