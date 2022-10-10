@@ -25,6 +25,7 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     w_min = []
     errors = []
     iteraciones = []
+    accuracys = []
     while error_min > 0 and i < cot:
         iteraciones.append(i)
         m = random.randint(0, len(points) - 1)
@@ -61,6 +62,7 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
 
         perceptron.w = new_w
         errors.append(error)
+        accuracys.append(accuracy(perceptron.w, points, perceptron_type, b))
         if error <= error_min:
             error_min = error
             w_min = new_w
@@ -68,7 +70,7 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
     perceptron.w = w_min
     print(f"epocas: {i}")
     print(f"min training error: {error_min}")
-    return perceptron, errors, iteraciones
+    return perceptron, errors, iteraciones, accuracys
 
 
 def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: float, inner_layers: int, nodes_count: int,
@@ -535,6 +537,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     errors = []
     epocas = []
     dim = 0
+    accuracys=[]
     if perceptron_type == 'step':
         for i in range(len(x)):
             arr = [1]
@@ -659,7 +662,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
                                                                     nodes_count, 1, momentum, adaptative, adam)
         else:
-            perception, errors, epocas = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
+            perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
     else:
         min_error = math.inf
         min_weights = {}
@@ -677,7 +680,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                                                                         nodes_count,
                                                                         1, momentum, adaptative, adam)
             else:
-                perception, errors, epocas = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
+                perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
             if perceptron_type == 'linear':
                 error = calculate_error_linear(evaluation_set, perception.w)
@@ -729,7 +732,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             f"\naccuracy noise evaluation set: {accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, 1, b)}")
         print(f"noise error: {error}")
 
-    return perception, error, errors, epocas, accuracy_train, accuracy_evaluation
+    return perception, error, errors, epocas, accuracy_train, accuracy_evaluation, accuracys
 
 
 if __name__ == "__main__":

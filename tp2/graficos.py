@@ -5,57 +5,133 @@ from matplotlib import pyplot as plt
 
 from main import run
 
-
-def error_vs_n():
-    learn = [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-    errors = []
-    for n in learn:
-        aux = []
-        for i in range(10):
-            perceptron, error, errores, iters = run(5000, n, None, None, 1, 'scale', 'linear')
-            aux.append(error)
-        errors.append(aux)
-    y = []
-    y_errors = []
-    for errorN in errors:
-        y.append(numpy.mean(errorN))
-        y_errors.append(numpy.std(errorN))
-    minE = math.inf
-    minN = 0
-    for i in range(len(learn)):
-        print(f"{learn[i]}  {y[i]}")
-        if y[i] < minE:
-            minE = y[i]
-            minN = learn[i]
-    print(f"{minN}  {minE}")
-    fig, ax = plt.subplots()
-    # ax.set_yscale('log')
-
-    ax.errorbar(learn, y,
-                xerr=numpy.zeros(len(y_errors)),
-                yerr=y_errors,
-                fmt='-o')
-
-    ax.set_xlabel('Tasa de Aprendizaje')
-    ax.set_ylabel('Error')
-    ax.set_title('Perceptron Lineal')
-
-    plt.show()
-
-
 def error_vs_iter():
-    perceptron, error, errores, iters = run(1000, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
-                                            'step', 10, 10, False, False, False, False, 5, 0.1)
+    perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(1000, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
+                                            'non-linear-logistic', 10, 10, False, False, False, False, 5, 0.1)
     fig, ax = plt.subplots()
-    ax.errorbar(iters, errores,
+    ax.errorbar(iters, errors,
                 xerr=numpy.zeros(len(iters)),
-                yerr=numpy.zeros(len(errores))
+                yerr=numpy.zeros(len(errors))
                 )
+    # ax.set_yscale('log')
     ax.set_xlabel('Iteracion')
     ax.set_ylabel('Error')
     ax.set_title('Error vs iteraciones')
     plt.show()
 
+def accuracy_vs_iter():
+    perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(1000, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
+                                            'non-linear-logistic', 10, 10, False, False, False, False, 5, 0.1)
+    fig, ax = plt.subplots()
+    print(accuracys)
+    ax.errorbar(iters, accuracys,
+                xerr=numpy.zeros(len(iters)),
+                yerr=numpy.zeros(len(errors))
+                )
+    # ax.set_yscale('log')
+    ax.set_xlabel('Iteracion')
+    ax.set_ylabel('Presicion')
+    ax.set_title('Presicion vs iteraciones')
+    plt.show()
+
+def accuracy_vs_k():
+    k_array = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    accuracy_arr = []
+
+    for k in k_array:
+        aux = []
+        for i in range(10):
+            perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(1000, 0.1,
+                                                                                [[-1, 1], [1, -1], [-1, -1], [1, 1]],
+                                                                                [1, 1, -1, -1], 1, 'scale',
+                                                                                'non-linear-tan', 10, 10, False,
+                                                                                False, False, True, k, 0.1)
+            aux.append(accuracy_evaluation)
+        accuracy_arr.append(aux)
+
+    y = []
+    y_errors = []
+    for errorN in accuracy_arr:
+        y.append(numpy.mean(errorN))
+        y_errors.append(numpy.std(errorN))
+
+    fig, ax = plt.subplots()
+    ax.errorbar(k_array, y,
+                xerr=numpy.zeros(len(y_errors)),
+                yerr=y_errors,
+                fmt='-o')
+
+    ax.set_xlabel('Cantidad de conjuntos')
+    ax.set_ylabel('Precision')
+    ax.set_title('Perceptron No Lineal')
+    plt.show()
+
+
+def accuracy_vs_n():
+    n_array = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2,
+             2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3]
+    accuracy_arr = []
+
+    for n in n_array:
+        aux = []
+        for i in range(10):
+            perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(1000, n,
+                                                                                [[-1, 1], [1, -1], [-1, -1], [1, 1]],
+                                                                                [1, 1, -1, -1], 1, 'scale',
+                                                                                'non-linear-tan', 10, 10, False,
+                                                                                False, False, False, 5, 0.1)
+            aux.append(accuracy_evaluation)
+        accuracy_arr.append(aux)
+
+    y = []
+    y_errors = []
+    for errorN in accuracy_arr:
+        y.append(numpy.mean(errorN))
+        y_errors.append(numpy.std(errorN))
+
+    fig, ax = plt.subplots()
+    ax.errorbar(n_array, y,
+                xerr=numpy.zeros(len(y_errors)),
+                yerr=y_errors,
+                fmt='-o')
+
+    ax.set_xlabel('Tasa de aprendizaje')
+    ax.set_ylabel('Precision')
+    ax.set_title('Perceptron No Lineal')
+    plt.show()
+
+def error_vs_n():
+    n_array = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2,
+             2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3]
+    error_arr = []
+
+    for n in n_array:
+        aux = []
+        for i in range(10):
+            perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(1000, n,
+                                                                                [[-1, 1], [1, -1], [-1, -1], [1, 1]],
+                                                                                [1, 1, -1, -1], 1, 'scale',
+                                                                                'non-linear-tan', 10, 10, False,
+                                                                                False, False, False, 5, 0.1)
+            aux.append(error)
+        error_arr.append(aux)
+
+    y = []
+    y_errors = []
+    for errorN in error_arr:
+        y.append(numpy.mean(errorN))
+        y_errors.append(numpy.std(errorN))
+
+    fig, ax = plt.subplots()
+    ax.errorbar(n_array, y,
+                xerr=numpy.zeros(len(y_errors)),
+                yerr=y_errors,
+                fmt='-o')
+
+    ax.set_xlabel('Tasa de aprendizaje')
+    ax.set_ylabel('Error')
+    ax.set_title('Perceptron No Lineal')
+    plt.show()
 
 def iter_vs_n():
     # learn = [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
@@ -177,7 +253,7 @@ def main():
     # error_vs_iters_multi()
     # error_vs_iter()
     # iter_vs_n()
-    compare_training()
+    error_vs_n()
 
 
 if __name__ == "__main__":
