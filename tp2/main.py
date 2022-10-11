@@ -68,7 +68,7 @@ def perceptron_run(points: [], n: float, cot: int, dim: int, perceptron_type: st
             w_min = new_w
         i += 1
     perceptron.w = w_min
-    print(f"epocas: {i}")
+    print(f"Iteraciones: {i}")
     print(f"min training error: {error_min}")
     return perceptron, errors, iteraciones, accuracys
 
@@ -489,7 +489,7 @@ def accuracy(weights: [], points: [], perceptron_type: str, b: float):
         elif perceptron_type == 'non-linear-logistic':
             o = 1 / (1 + math.e ** (-2 * b * h))
         # print(f"h: {h}, point: {point}")
-        if perceptron_type == 'linear':
+        if perceptron_type == 'linear' or perceptron_type == 'step':
             if o - epsilon < point.expected_value < o + epsilon:
                 win += 1
         else:
