@@ -290,7 +290,7 @@ def calculate_multi_layer_error(points: [], inner_layers: int, weights: {}, node
         for i in range(output_nodes):
             total_error += (point.expected_value[i] - o_dictionary[inner_layers + 1][i]) ** 2
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
-    return total_error / len(points)
+    return total_error / (len(points) * output_nodes)
 
 
 def calculate_o(h: float, b: float):
@@ -474,7 +474,7 @@ def accuracy_multi_layer(weights: {}, points: [], inner_layers: int, nodes_count
                 i] + epsilon:
                 win += 1
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
-    return win / len(points)
+    return win / (len(points) * output_nodes)
 
 
 def accuracy(weights: [], points: [], perceptron_type: str, b: float):
