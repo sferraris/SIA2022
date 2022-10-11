@@ -543,6 +543,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     accuracy_array = []
     dim = 0
     accuracys=[]
+    output_nodes = 1
     if perceptron_type == 'step':
         for i in range(len(x)):
             arr = [1]
@@ -615,6 +616,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         points = []
         number = [1]
         dim = 5 * 7
+        output_nodes = 2
         for i in range(len(lines)):
             numbers = lines[i].split()
             for ni in numbers:
@@ -640,6 +642,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         points = []
         number = [1]
         dim = 5 * 7
+        output_nodes = 10
         for i in range(len(lines)):
             numbers = lines[i].split()
             for ni in numbers:
@@ -665,7 +668,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
                 or perceptron_type == 'multi-layer-number':
             perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
-                                                                    nodes_count, 1, momentum, adaptative, adam)
+                                                                    nodes_count, output_nodes, momentum, adaptative, adam)
         else:
             perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
     else:
@@ -686,7 +689,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             if perceptron_type == 'multi-layer-even' or perceptron_type == 'multi-layer-number':
                 perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
                                                                         nodes_count,
-                                                                        1, momentum, adaptative, adam)
+                                                                        output_nodes, momentum, adaptative, adam)
             else:
                 perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
@@ -731,9 +734,9 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         print(f"accuracy train: {accuracy_train}")
     if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
             or perceptron_type == 'multi-layer-number':
-        error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, 1, b)
-        accuracy_train = accuracy_multi_layer(perception, training_set, inner_layers, nodes_count, 1, b)
-        accuracy_evaluation = accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, 1, b)
+        error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, output_nodes, b)
+        accuracy_train = accuracy_multi_layer(perception, training_set, inner_layers, nodes_count, output_nodes, b)
+        accuracy_evaluation = accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, output_nodes, b)
         print(
             f"accuracy evaluation set: {accuracy_evaluation}")
         print(f"accuracy train: {accuracy_train}")
@@ -741,9 +744,9 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
 
     if perceptron_type == 'multi-layer-number':
         evaluation_set = set_noise(points, delta)
-        error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, 1, b)
+        error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, output_nodes, b)
         print(
-            f"\naccuracy noise evaluation set: {accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, 1, b)}")
+            f"\naccuracy noise evaluation set: {accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, output_nodes, b)}")
         print(f"noise error: {error}")
 
     return perception, error, errors, epocas, accuracy_train, accuracy_evaluation, accuracys
