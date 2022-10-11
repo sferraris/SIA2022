@@ -381,11 +381,15 @@ def main():
     #accuracy_vs_iters_multi()
     # error_vs_iter()
     # iter_vs_n()
+<<<<<<< Updated upstream
     # compare_training()
     # error_vs_percentage_train()
     # error_vs_k()
     #accuracy_vs_percentage_train()
     error_vs_n()
+=======
+    accuracy_vs_n()
+>>>>>>> Stashed changes
 
 if __name__ == "__main__":
     main()
