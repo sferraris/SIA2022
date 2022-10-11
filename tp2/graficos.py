@@ -210,16 +210,46 @@ def inner_layers():
 
 
 def error_vs_iters_multi():
-    weight, error, errors, epocas = run(300, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
-                                        'multi-layer-even', 10, 10, True, False, False)
+    weight, error, errors, epocas, accuracy_train, accuracy_evaluation, accuracy_array = run(300, 0.1, [[-1, 1], [1, -1], [-1, -1], [1, 1]], [1, 1, -1, -1], 1, 'scale',
+                                        'multi-layer-xor', 6, 6, False, False, True, True, 5, 0.2, 0.6)
     fig, ax = plt.subplots()
     ax.errorbar(epocas, errors,
                 xerr=numpy.zeros(len(epocas)),
                 yerr=numpy.zeros(len(errors))
                 )
+
+    ax.set_xlabel('Epocas')
+    ax.set_ylabel('Error')
+    ax.set_title('Perceptron Multicapa')
+    fig2, ax2 = plt.subplots()
+    ax2.errorbar(epocas, accuracy_array,
+                xerr=numpy.zeros(len(epocas)),
+                yerr=numpy.zeros(len(accuracy_array))
+                )
+
+    ax2.set_xlabel('Epocas')
+    ax2.set_ylabel('Precision')
+    ax2.set_title('Perceptron Multicapa')
+
     plt.show()
 
-
+def accuracy_vs_iters_multi():
+    weight, error, errors, epocas, accuracy_train, accuracy_evaluation, accuracy_array = run(150, 0.1,
+                                                                                             [[-1, 1], [1, -1],
+                                                                                              [-1, -1], [1, 1]],
+                                                                                             [1, 1, -1, -1], 1, 'scale',
+                                                                                             'multi-layer-xor', 6, 6,
+                                                                                             True, False, False, True,
+                                                                                             5, 0.2, 0.6)
+    fig, ax = plt.subplots()
+    ax.errorbar(epocas, accuracy_array,
+                xerr=numpy.zeros(len(epocas)),
+                yerr=numpy.zeros(len(accuracy_array))
+                )
+    ax.set_xlabel('Epocas')
+    ax.set_ylabel('Precision')
+    ax.set_title('Perceptron Multicapa')
+    plt.show()
 def compare_training():
     errors = []
     accuracy_train_array = []
@@ -246,15 +276,116 @@ def compare_training():
     print(f"Media de cantidad iteraciones: {numpy.mean(iters_array)}")
     print(f"Desviacion estandar de cantidad iteraciones: {numpy.std(iters_array)}")
 
+def error_vs_percentage_train():
+    percentage = [ 0.1, 0.15,  0.2, 0.25, 0.3,0.35, 0.4,0.45, 0.5,0.55, 0.6, 0.65, 0.7,0.75, 0.8,0.85, 0.9, 0.95]
+    errors = []
+    for p in percentage:
+        aux = []
+        for i in range(10):
+            weight, error, errores, iters, accuracy_train, accuracy_evaluation = run(1000, 0.1,
+                                                                                 [[-1, 1], [1, -1], [-1, -1], [1, 1]],
+                                                                                 [1, 1, -1, -1], 1, 'scale',
+                                                                                 'non-linear-tan', 10, 10, False, False,
+                                                                                 False, False, 5, 0.1, p)
+            aux.append(error)
+        errors.append(aux)
+    y = []
+    y_errors = []
+    for errorN in errors:
+        y.append(numpy.mean(errorN))
+        y_errors.append(numpy.std(errorN))
 
+    fig, ax = plt.subplots()
+    # ax.set_yscale('log')
+
+    ax.errorbar(percentage, y,
+                xerr=numpy.zeros(len(y_errors)),
+                yerr=y_errors,
+                fmt='-o')
+
+    ax.set_xlabel('Conjunto de Entrenamiento (%)')
+    ax.set_ylabel('Error')
+    ax.set_title('Perceptron No Lineal')
+
+    plt.show()
+
+def error_vs_k():
+    percentage = [ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    errors = []
+    for p in percentage:
+        aux = []
+        for i in range(10):
+            weight, error, errores, iters, accuracy_train, accuracy_evaluation = run(1000, 0.1,
+                                                                                 [[-1, 1], [1, -1], [-1, -1], [1, 1]],
+                                                                                 [1, 1, -1, -1], 1, 'scale',
+                                                                                 'non-linear-tan', 10, 10, False, False,
+                                                                                 False, True, 5, 0.1, p)
+            aux.append(error)
+        errors.append(aux)
+    y = []
+    y_errors = []
+    for errorN in errors:
+        y.append(numpy.mean(errorN))
+        y_errors.append(numpy.std(errorN))
+
+    fig, ax = plt.subplots()
+    # ax.set_yscale('log')
+
+    ax.errorbar(percentage, y,
+                xerr=numpy.zeros(len(y_errors)),
+                yerr=y_errors,
+                fmt='-o')
+
+    ax.set_xlabel('Cantidad de Conjuntos')
+    ax.set_ylabel('Error')
+    ax.set_title('Perceptron No Lineal')
+
+    plt.show()
+
+def accuracy_vs_percentage_train():
+    percentage = [ 0.1, 0.15,  0.2, 0.25, 0.3,0.35, 0.4,0.45, 0.5,0.55, 0.6, 0.65, 0.7,0.75, 0.8,0.85, 0.9, 0.95]
+    errors = []
+    for p in percentage:
+        aux = []
+        for i in range(10):
+            weight, error, errores, iters, accuracy_train, accuracy_evaluation = run(1000, 0.1,
+                                                                                 [[-1, 1], [1, -1], [-1, -1], [1, 1]],
+                                                                                 [1, 1, -1, -1], 1, 'scale',
+                                                                                 'non-linear-tan', 10, 10, False, False,
+                                                                                 False, True, 5, 0.1, p)
+            aux.append(accuracy_evaluation)
+        errors.append(aux)
+    y = []
+    y_errors = []
+    for errorN in errors:
+        y.append(numpy.mean(errorN))
+        y_errors.append(numpy.std(errorN))
+
+    fig, ax = plt.subplots()
+    # ax.set_yscale('log')
+
+    ax.errorbar(percentage, y,
+                xerr=numpy.zeros(len(y_errors)),
+                yerr=y_errors,
+                fmt='-o')
+
+    ax.set_xlabel('Conjunto de Entrenamiento (%)')
+    ax.set_ylabel('Precision')
+    ax.set_title('Perceptron No Lineal')
+
+    plt.show()
 def main():
     # error_vs_n()
     # inner_layers()
-    # error_vs_iters_multi()
+    error_vs_iters_multi()
+    #accuracy_vs_iters_multi()
     # error_vs_iter()
     # iter_vs_n()
+    # compare_training()
+    # error_vs_percentage_train()
+    # error_vs_k()
+    #accuracy_vs_percentage_train()
     error_vs_n()
-
 
 if __name__ == "__main__":
     main()

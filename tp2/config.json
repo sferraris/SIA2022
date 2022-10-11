@@ -14,5 +14,6 @@
   "adam" : false,
   "cross_validation": true,
   "k" : 5,
-  "delta": 0.2
+  "delta": 0.2,
+  "percentage_train": 0.5
 }

@@ -78,7 +78,7 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     stop_index = 0
     error_min = math.inf
     alpha = 0.8
-    max_error_progress = 6
+    max_error_progress = 2
     alpha_adam = 0.001
     betha1 = 0.9
     betha2 = 0.999
@@ -88,6 +88,7 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
     weights = init_weights(inner_layers, nodes_count, dim, output_nodes)
     errors = []
     epocas = []
+    accuracy_array = []
     for i in range(len(weights)):
         mt[i + 1] = []
         for j in range(len(weights[i])):
@@ -124,7 +125,7 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
                     for i in range(len(delta_w_dictionary)):
                         for j in range(len(delta_w_dictionary[i + 1])):
                             for z in range(len(delta_w_dictionary[i + 1][j])):
-                                delta_w_dictionary[i + 1][j][z] += delta_w_old[i + 1][j][z] * alpha
+                                delta_w_dictionary[i + 1][j][z] -= delta_w_old[i + 1][j][z] * alpha
                 else:
                     delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, inner_layers, nodes_count,
                                                            output_nodes, dim)
@@ -166,12 +167,13 @@ def multi_layer_perceptron_run(points: [], n: float, cot: int, dim: int, b: floa
                 error_min = error
                 min_weights = copy.deepcopy(weights)
         errors.append(error)
+        accuracy_array.append(accuracy_multi_layer(weights, points, inner_layers, nodes_count, output_nodes, b))
         stop_index += 1
 
     print(f"epocas: {stop_index}")
     print(f"min training error: {error_min}")
 
-    return min_weights, errors, epocas
+    return min_weights, errors, epocas, accuracy_array
 
 
 def init_weights(inner_layers: int, nodes_count: int, dim: int, output_nodes: int):
@@ -509,7 +511,8 @@ def set_noise(points: [], delta: float):
 
 
 def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2,
-        nodes_count=2, momentum=False, adaptative=False, adam=False, cross_validation=False, k=1, delta=0.2):
+        nodes_count=2, momentum=False, adaptative=False, adam=False, cross_validation=False, k=1, delta=0.2,
+        percentage_train = 0.5):
     config_file = open("config.json")
     config_data = json.load(config_file)
     if not config_data['config_by_code']:
@@ -528,6 +531,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         adam = config_data["adam"]
         cross_validation = config_data["cross_validation"]
         delta = config_data["delta"]
+        percentage_train = config_data["percentage_train"]
 
     point_array = []
     training_set = []
@@ -536,6 +540,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     points = []
     errors = []
     epocas = []
+    accuracy_array = []
     dim = 0
     accuracys=[]
     if perceptron_type == 'step':
@@ -590,7 +595,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         if cross_validation:
             point_set = crossover_selection_method(point_array, k)
         else:
-            training_set, evaluation_set = other_selection_method(point_array, 0.5)
+            training_set, evaluation_set = other_selection_method(point_array, percentage_train)
     elif perceptron_type == 'multi-layer-xor':
         for i in range(len(x)):
             arr = [1]
@@ -627,7 +632,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         if cross_validation:
             point_set = crossover_selection_method(points, k)
         else:
-            training_set, evaluation_set = other_selection_method(points, 0.5)
+            training_set, evaluation_set = other_selection_method(points, percentage_train)
 
     elif perceptron_type == 'multi-layer-number':
         file = open('TP2-ej3-digitos.txt')
@@ -654,12 +659,12 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         if cross_validation:
             point_set = crossover_selection_method(points, k)
         else:
-            training_set, evaluation_set = other_selection_method(points, 0.5)
+            training_set, evaluation_set = other_selection_method(points, percentage_train)
 
     if not cross_validation or perceptron_type == 'step' or perceptron_type == 'multi-layer-xor':
         if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
                 or perceptron_type == 'multi-layer-number':
-            perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
+            perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
                                                                     nodes_count, 1, momentum, adaptative, adam)
         else:
             perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
@@ -669,6 +674,9 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
         print("iteraciones cross_validation")
         min_eval = []
         min_train = []
+        min_accuaracy = []
+        min_errors = []
+        min_iters = []
         for k_idx in range(k):
             print(f"\nindex: {k_idx}")
             evaluation_set = point_set[k_idx]
@@ -676,7 +684,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                 if not set_idx == k_idx:
                     training_set += point_set[set_idx]
             if perceptron_type == 'multi-layer-even' or perceptron_type == 'multi-layer-number':
-                perception, errors, epocas = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
+                perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
                                                                         nodes_count,
                                                                         1, momentum, adaptative, adam)
             else:
@@ -693,10 +701,16 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                 min_weights = copy.deepcopy(perception)
                 min_eval = evaluation_set
                 min_train = training_set
+                min_errors = errors
+                min_accuaracy = accuracys
+                min_iters = epocas
         print("")
         perception = min_weights
         training_set = min_train
         evaluation_set = min_eval
+        errors = min_errors
+        accuracys = min_accuaracy
+        epocas = min_iters
 
     # print(perception)
     accuracy_train = 0
