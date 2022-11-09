@@ -6,7 +6,7 @@
   "perceptron_type": "multi-layer-number",
   "b": 1,
   "normalization_type": "scale",
-  "config_by_code": false,
+  "config_by_code": true,
   "inner_layers" : 2,
   "nodes_count" : 35,
   "momentum" : true,

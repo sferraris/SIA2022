@@ -2,13 +2,13 @@ import copy
 import json
 import math
 
-import declarations
+import tp2.declarations as declarations
 import random
 import numpy
 import matplotlib
 import csv
 from mpl_toolkits import mplot3d
-from declarations import Point
+from tp2.declarations import Point
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -512,7 +512,7 @@ def set_noise(points: [], delta: float):
 
 def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2,
         nodes_count=2, momentum=False, adaptative=False, adam=False, cross_validation=False, k=1, delta=0.2,
-        percentage_train = 0.5):
+        percentage_train=0.5):
     config_file = open("config.json")
     config_data = json.load(config_file)
     if not config_data['config_by_code']:
@@ -542,7 +542,7 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     epocas = []
     accuracy_array = []
     dim = 0
-    accuracys=[]
+    accuracys = []
     output_nodes = 1
     if perceptron_type == 'step':
         for i in range(len(x)):
@@ -667,8 +667,10 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
     if not cross_validation or perceptron_type == 'step' or perceptron_type == 'multi-layer-xor':
         if perceptron_type == 'multi-layer-xor' or perceptron_type == 'multi-layer-even' \
                 or perceptron_type == 'multi-layer-number':
-            perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
-                                                                    nodes_count, output_nodes, momentum, adaptative, adam)
+            perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b,
+                                                                               inner_layers,
+                                                                               nodes_count, output_nodes, momentum,
+                                                                               adaptative, adam)
         else:
             perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
     else:
@@ -687,9 +689,11 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
                 if not set_idx == k_idx:
                     training_set += point_set[set_idx]
             if perceptron_type == 'multi-layer-even' or perceptron_type == 'multi-layer-number':
-                perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b, inner_layers,
-                                                                        nodes_count,
-                                                                        output_nodes, momentum, adaptative, adam)
+                perception, errors, epocas, accuracys = multi_layer_perceptron_run(training_set, n, cot, dim, b,
+                                                                                   inner_layers,
+                                                                                   nodes_count,
+                                                                                   output_nodes, momentum, adaptative,
+                                                                                   adam)
             else:
                 perception, errors, epocas, accuracys = perceptron_run(training_set, n, cot, dim, perceptron_type, b)
 
@@ -736,7 +740,8 @@ def run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_
             or perceptron_type == 'multi-layer-number':
         error = calculate_multi_layer_error(evaluation_set, inner_layers, perception, nodes_count, output_nodes, b)
         accuracy_train = accuracy_multi_layer(perception, training_set, inner_layers, nodes_count, output_nodes, b)
-        accuracy_evaluation = accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, output_nodes, b)
+        accuracy_evaluation = accuracy_multi_layer(perception, evaluation_set, inner_layers, nodes_count, output_nodes,
+                                                   b)
         print(
             f"accuracy evaluation set: {accuracy_evaluation}")
         print(f"accuracy train: {accuracy_train}")

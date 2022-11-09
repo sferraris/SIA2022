@@ -106,17 +106,17 @@ def error_vs_n():
     error_arr = []
     accuracy_arr = []
 
-    for layer in layers:
+    for n in n_array:
         aux = []
         aux_acc = []
-        for i in range(5):
-            perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(300, 0.1,
+        for i in range(10):
+            perception, error, errors, iters, accuracy_train, accuracy_evaluation, accuracys = run(300, n,
                                                                                 [[-1, 1], [1, -1], [-1, -1], [1, 1]],
                                                                                 [1, 1, -1, -1], 1, 'scale',
-                                                                                'multi-layer-even', layer, 6, False,
+                                                                                'multi-layer-xor', 6, 6, False,
                                                                                 False, False, False, 5, 0.1, 0.8)
             aux.append(error)
-            aux.append(accuracy_evaluation)
+            aux_acc.append(accuracy_evaluation)
         error_arr.append(aux)
         accuracy_arr.append(aux_acc)
 
@@ -127,12 +127,12 @@ def error_vs_n():
         y_errors.append(numpy.std(errorN))
 
     fig, ax = plt.subplots()
-    ax.errorbar(layers, y,
+    ax.errorbar(n_array, y,
                 xerr=numpy.zeros(len(y_errors)),
                 yerr=y_errors,
                 fmt='-o')
 
-    ax.set_xlabel('Capas')
+    ax.set_xlabel('Tasa de aprendizaje')
     ax.set_ylabel('Error')
     ax.set_title('Perceptron Multicapa')
 
@@ -143,12 +143,12 @@ def error_vs_n():
         y_errors_acc.append(numpy.std(errorN))
 
     fig2, ax2 = plt.subplots()
-    ax2.errorbar(layers, y,
+    ax2.errorbar(n_array, y_acc,
                 xerr=numpy.zeros(len(y_errors_acc)),
-                yerr=y_acc,
+                yerr=y_errors_acc,
                 fmt='-o')
 
-    ax2.set_xlabel('Capas')
+    ax2.set_xlabel('Tasa de aprendizaje')
     ax2.set_ylabel('Precision')
     ax2.set_title('Perceptron Multicapa')
 
