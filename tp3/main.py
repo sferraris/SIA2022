@@ -16,20 +16,22 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
-def autoencoder_run():
-    # run(cot=1000, n=0.1, x=None, y=None, b=1, normalization='scale', perceptron_type='linear', inner_layers=2,
-    #         nodes_count=2, momentum=False, adaptative=False, adam=False, cross_validation=False, k=1, delta=0.2,
-    #         percentage_train = 0.5):
-
-    # x e y -> siempre None
-    # normalizacion siempre scale
-    # perceptron_type siempre multilayer-nuevoej (crear nuevo en codigo)
-    # inner layers, nodes count, a definir segun convenga
-    # adam siempre False
-    # momentum, adaptative, a convenir
-    # cross validation siempre false porque lo hicimos mal, k no importa
-    # delta es para el noise
-    # percentage train probablemente sea siempre 1, pero a definir por las preguntas del tp
+def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam=False, delta=0.2, percentage_train=0.5,
+                    layers=None):
+    if layers is None:
+        layers = []
+    config_file = open("config.json")
+    config_data = json.load(config_file)
+    if not config_data['config_by_code']:
+        cot = config_data["cot"]
+        n = config_data["n"]
+        b = config_data["b"]
+        momentum = config_data["momentum"]
+        adaptative = config_data["adaptative"]
+        adam = config_data["adam"]
+        delta = config_data["delta"]
+        percentage_train = config_data["percentage_train"]
+        layers = config_data["layers"]
 
     font = [
         [1, 0x04, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00],
@@ -66,16 +68,32 @@ def autoencoder_run():
         [1, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f]
     ]
     initial_points = []
+    minExpected = math.inf
+    maxExpected = -math.inf
     for i in range(len(font)):
-        initial_points.append(Point(font[i], font[i]))
+        for j in range(len(font[i])):
+            if j > 0:
+                if font[i][j] < minExpected:
+                    minExpected = font[i][j]
+                if font[i][j] > maxExpected:
+                    maxExpected = font[i][j]
+    for i in range(len(font)):
+        expected = []
+        for j in range(len(font[i])):
+            if j != 0:
+                expected.append(2 * (font[i][j] - minExpected) / (maxExpected - minExpected) - 1)
 
-    min_weights_encoder, errors, epocas, accuracy_array = auto_encoder_run(initial_points, 0.1, 500, 7, 0.1, 2, 2, 2, False, False, False)
+        initial_points.append(Point(font[i], expected))
 
-    print("Hola Micus")
+    dim = 7
+
+    weights, errors, epocas, accuracy_array = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative, adam,
+                                                               layers)
+    return weights, errors, epocas, accuracy_array, initial_points
 
 
-def auto_encoder_run(points: [], n: float, cot: int, dim: int, b: float, inner_layers: int, nodes_count: int,
-                     output_nodes: int, momentum: bool, adaptative: bool, adam: bool):
+def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, adaptative: bool, adam: bool,
+                     layers: []):
     stop_index = 0
     error_min = math.inf
 
@@ -93,8 +111,9 @@ def auto_encoder_run(points: [], n: float, cot: int, dim: int, b: float, inner_l
     mt = {}
     # ENDADAM
 
-    encoder_weights = funcs.init_weights(inner_layers, nodes_count, dim, output_nodes)
-    decoder_weights = funcs.init_weights(inner_layers, nodes_count, output_nodes, dim)
+    # encoder_weights = funcs.init_weights(inner_layers, nodes_count, dim, output_nodes)
+    # decoder_weights = funcs.init_weights(inner_layers, nodes_count, output_nodes, dim)
+    weights = init_weights(layers)
 
     # Parametros para salida, hay que redefinirlos pero no duplicarlos
     errors = []
@@ -103,21 +122,20 @@ def auto_encoder_run(points: [], n: float, cot: int, dim: int, b: float, inner_l
     # END paramnetros para salida
 
     # ADAM init vt y mt TODO si hacemos adam hay que hacerlo con los decoders tb
-    for i in range(len(encoder_weights)):
-        mt[i + 1] = []
-        for j in range(len(encoder_weights[i])):
-            mt[i + 1].append([])
-            for z in range(len(encoder_weights[i][j])):
-                mt[i + 1][j].append(0)
-    vt = copy.deepcopy(mt)
-    mt_corrected = copy.deepcopy(mt)
-    vt_corrected = copy.deepcopy(mt)
+    # for i in range(len(encoder_weights)):
+    #     mt[i + 1] = []
+    #     for j in range(len(encoder_weights[i])):
+    #         mt[i + 1].append([])
+    #         for z in range(len(encoder_weights[i][j])):
+    #             mt[i + 1][j].append(0)
+    # vt = copy.deepcopy(mt)
+    # mt_corrected = copy.deepcopy(mt)
+    # vt_corrected = copy.deepcopy(mt)
     # END ADAM init weights
 
-    min_weights_encoder = copy.deepcopy(encoder_weights)
+    min_weights = copy.deepcopy(weights)
     delta_w_dictionary_encoder = {}
 
-    min_weights_decoder = copy.deepcopy(encoder_weights)
     delta_w_dictionary_decoder = {}
     # Un solo error, TODO rehacer la funcion
     error = 0
@@ -128,7 +146,7 @@ def auto_encoder_run(points: [], n: float, cot: int, dim: int, b: float, inner_l
     # END error progress
 
     while error_min > 1E-3 and stop_index < cot:
-        print(f"{(stop_index/cot) * 100}%")
+        print(f"{(stop_index / cot) * 100}%")
         indexes = list(range(len(points)))
         numpy.random.shuffle(indexes)
         # random_index = random.randint(0, len(points) - 1)
@@ -136,49 +154,22 @@ def auto_encoder_run(points: [], n: float, cot: int, dim: int, b: float, inner_l
 
         for random_index in indexes:
             t += 1
-            encoder_initial_point = points[random_index]
+            point = points[random_index]
+            # print("1")
+            h_dictionary, o_dictionary = p_forward(layers, weights, point, b)
+            # print("2")
+            error_dictionary = p_back(h_dictionary, o_dictionary[len(layers) - 1], layers, weights, b,
+                                      point.expected_value)
+            # print("3")
+            delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, layers)
+            # print("4")
+            weights = calculate_new_weights(delta_w_dictionary, weights, layers)
 
-            h_dictionary_encoder, o_dictionary_encoder = funcs.p_forward(inner_layers, encoder_weights, nodes_count,
-                                                                         output_nodes, encoder_initial_point, b)
-
-            initial_arr = [1]
-            for i in range(len(o_dictionary_encoder[inner_layers + 1])):
-                initial_arr.append(o_dictionary_encoder[inner_layers + 1][i])
-
-            decoder_initial_point = Point(initial_arr, encoder_initial_point.e)
-
-            h_dictionary_decoder, o_dictionary_decoder = funcs.p_forward(inner_layers, decoder_weights, nodes_count,
-                                                                         dim, decoder_initial_point, b)
-
-            error_dictionary = p_back(h_dictionary_encoder, h_dictionary_decoder,
-                                      o_dictionary_decoder[inner_layers + 1], inner_layers, encoder_weights,
-                                      decoder_weights, nodes_count, output_nodes, dim, b,
-                                      encoder_initial_point.e[1:])
-
-            # ACA antes estaba adam, momentum
-            error_dictionary_decoder = dict((k, v) for (k, v) in error_dictionary.items() if k >= inner_layers + 1)
-            for i in range(inner_layers + 1):
-                error_dictionary_decoder[i + 1] = error_dictionary_decoder[i + 1 + inner_layers + 1]
-
-
-
-            delta_w_dictionary_decoder = funcs.calculate_delta_w(o_dictionary_decoder, error_dictionary_decoder, n,
-                                                                 inner_layers, nodes_count, dim, output_nodes)
-
-
-            delta_w_dictionary_encoder = funcs.calculate_delta_w(o_dictionary_encoder, error_dictionary, n,
-                                                                 inner_layers, nodes_count, output_nodes, dim)
-
-            decoder_weights = funcs.calculate_new_weights(delta_w_dictionary_decoder, decoder_weights, inner_layers,
-                                                          nodes_count, dim)
-
-            encoder_weights = funcs.calculate_new_weights(delta_w_dictionary_encoder, encoder_weights, inner_layers,
-                                                          nodes_count, output_nodes)
             # END adam, momentum
 
             last_error = error
-            error = calculate_multi_layer_error(points, inner_layers, encoder_weights, decoder_weights, nodes_count,
-                                                output_nodes, dim, b)
+
+            error = calculate_multi_layer_error(points, weights, layers, b)
 
             if adaptative:
                 if error < last_error:
@@ -196,81 +187,107 @@ def auto_encoder_run(points: [], n: float, cot: int, dim: int, b: float, inner_l
 
             if error <= error_min:
                 error_min = error
-                min_weights_encoder = copy.deepcopy(encoder_weights)
+                min_weights = weights
         errors.append(error)
-        accuracy_array.append(
-            funcs.accuracy_multi_layer(encoder_weights, points, inner_layers, nodes_count, output_nodes, b))
+        # accuracy_array.append(
+        #   funcs.accuracy_multi_layer(encoder_weights, points, inner_layers, nodes_count, output_nodes, b))
         stop_index += 1
 
     print(f"epocas: {stop_index}")
-    print(f"min training error: {error_min}, min weights encoder: {min_weights_encoder}")
+    print(f"min training error: {error_min}")
 
-    return min_weights_encoder, errors, epocas, accuracy_array
+    return weights, errors, epocas, accuracy_array
 
 
-def p_back(h_dictionary_encoder: {}, h_dictionary_decoder: {}, output_array_decoder: [], inner_layers: int,
-           weights_encoder: {}, weights_decoder: {}, nodes_count: int, output_nodes: int, dim: int, b: float,
-           expected_value: []):
+def init_weights(layers: []):
+    weights = {}
+    for j in range(len(layers)):
+        if j != 0:
+            weights[j] = []
+            for i in range(layers[j]):
+                weights[j].append(numpy.random.uniform(-1, 1, size=(layers[j - 1] + 1)))
+    return weights
+
+
+def p_forward(layers: [], weights: {}, encoder_initial_point: Point, b: float):
+    h_dictionary = {}
+    o_dictionary = {0: encoder_initial_point.e}  # [1, -1, 1]
+
+    for i in range(len(layers)):
+        if i != 0:
+            h_dictionary[i] = []
+            o_dictionary[i] = []
+            if i != len(layers) - 1:
+                o_dictionary[i].append(1)
+            for j in range(layers[i]):
+                previous_o = o_dictionary[i - 1]
+                current_weights = weights[i][j]
+                current_h = funcs.array_prod(previous_o, current_weights)
+                current_o = funcs.calculate_o(current_h, b)
+                h_dictionary[i].append(current_h)
+                o_dictionary[i].append(current_o)
+    return h_dictionary, o_dictionary
+
+
+def p_back(h_dictionary: {}, output_array: [], layers: [], weights: {}, b: float, expected_value: []):
     error_dictionary = {}
-
-    for i in reversed(range(inner_layers + 1)):  # 3 + 1 -> 0...3 / -> 3 * 2 + 2 = 8 / 3...0 + 4
-        if i == inner_layers:
-            subtract_array = numpy.subtract(expected_value, output_array_decoder)
-            error_dictionary[inner_layers + 1 + i + 1] = []
-            for j in range(dim):
-                derivative = funcs.calculate_o_derivative(h_dictionary_decoder[i + 1][j], b)
-                error_dictionary[inner_layers + 1 + i + 1].append(derivative * subtract_array[j])
-        else:
-            error_dictionary[inner_layers + 1 + i + 1] = []
-            product_array = numpy.matmul(numpy.transpose(numpy.matrix(weights_decoder[i + 1])),
-                                         numpy.transpose(numpy.matrix(error_dictionary[inner_layers + 1 + i + 2])))
-            product_array_t = numpy.transpose(product_array)
-            for j in range(nodes_count):
-                derivative = funcs.calculate_o_derivative(h_dictionary_decoder[i + 1][j], b)
-                error_dictionary[inner_layers + 1 + i + 1].append(derivative * numpy.ravel(product_array_t)[j + 1])
-
-    # parte del decoder
-    # MAPEO
-    # Seguir errores
-    for i in reversed(range(inner_layers + 1)):
-        if i == inner_layers:
-            error_dictionary[i + 1] = []
-            product_array = numpy.matmul(numpy.transpose(numpy.matrix(weights_decoder[0])),
-                                         numpy.transpose(numpy.matrix(error_dictionary[i + 2])))
-            product_array_t = numpy.transpose(product_array)
-            for j in range(output_nodes):
-                derivative = funcs.calculate_o_derivative(h_dictionary_decoder[1][j], b)
-                error_dictionary[i + 1].append(derivative * numpy.ravel(product_array_t)[j + 1])
-        else:
-            error_dictionary[i + 1] = []
-            product_array = numpy.matmul(numpy.transpose(numpy.matrix(weights_encoder[i + 1])),
-                                         numpy.transpose(numpy.matrix(error_dictionary[i + 2])))
-            product_array_t = numpy.transpose(product_array)
-            for j in range(nodes_count):
-                derivative = funcs.calculate_o_derivative(h_dictionary_encoder[i + 1][j], b)
-                error_dictionary[i + 1].append(derivative * numpy.ravel(product_array_t)[j + 1])
+    for i in reversed(range(len(layers))):
+        if i != 0:
+            if i == len(layers) - 1:
+                subtract_array = numpy.subtract(expected_value, output_array)
+                error_dictionary[i] = []
+                for j in range(layers[i]):
+                    current_h = h_dictionary[i][j]
+                    derivative = funcs.calculate_o_derivative(current_h, b)
+                    current_error = derivative * subtract_array[j]
+                    error_dictionary[i].append(current_error)
+            else:
+                error_dictionary[i] = []
+                current_weights = weights[i + 1]
+                next_error = error_dictionary[i + 1]
+                product_array = numpy.matmul(numpy.transpose(numpy.matrix(current_weights)),
+                                             numpy.transpose(numpy.matrix(next_error)))
+                product_array_t = numpy.transpose(product_array)
+                for j in range(layers[i]):
+                    current_h = h_dictionary[i][j]
+                    derivative = funcs.calculate_o_derivative(current_h, b)
+                    current_error = derivative * numpy.ravel(product_array_t)[j + 1]
+                    error_dictionary[i].append(current_error)
 
     return error_dictionary
 
 
-def calculate_multi_layer_error(points: [], inner_layers: int, encoder_weights: {}, decoder_weights: {},
-                                nodes_count: int, output_nodes: int, dim: int, b: float):
+def calculate_delta_w(o_dictionary: {}, error_dictionary: {}, n: float, layers: []):
+    delta_w_dictionary = {}
+    for i in range(len(layers)):
+        if i != 0:
+            delta_w_dictionary[i] = []
+            for j in range(layers[i]):  # Por cada nodo calculo los nodes_count pesos
+                delta_w_array = []
+                current_error = error_dictionary[i][j]
+                for wi in range(layers[i - 1] + 1):
+                    previous_o = o_dictionary[i - 1][wi]
+                    delta_w_array.append(n * current_error * previous_o)
+                delta_w_dictionary[i].append(delta_w_array)
+
+    return delta_w_dictionary
+
+
+def calculate_new_weights(delta_w_dictionary: {}, weights: {}, layers: []):
+    for i in range(len(layers)):  # por cada layer
+        if i != 0:
+            for j in range(layers[i]):  # por cada nodo en esa layer
+                weights[i][j] += delta_w_dictionary[i][j]
+    return weights
+
+
+def calculate_multi_layer_error(points: [], weights: {}, layers: [], b: float):
     total_error = 0
+    dim = layers[0]
     for point in points:
-        h_dictionary_encoder, o_dictionary_encoder = funcs.p_forward(inner_layers, encoder_weights, nodes_count,
-                                                                     output_nodes, point, b)
-
-        initial_arr = [1]
-        for i in range(len(o_dictionary_encoder[inner_layers + 1])):
-            initial_arr.append(o_dictionary_encoder[inner_layers + 1][i])
-
-        decoder_initial_point = Point(initial_arr, point.e)
-
-        h_dictionary_decoder, o_dictionary_decoder = funcs.p_forward(inner_layers, decoder_weights, nodes_count,
-                                                                     dim, decoder_initial_point, b)
-
+        h_dictionary, o_dictionary = p_forward(layers, weights, point, b)
         for i in range(dim):
-            total_error += (point.e[i] - o_dictionary_decoder[inner_layers + 1][i]) ** 2
+            total_error += (point.expected_value[i] - o_dictionary[len(layers) - 1][i]) ** 2
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
     return total_error / (len(points) * dim)
 
