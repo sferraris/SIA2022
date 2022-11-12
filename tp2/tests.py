@@ -1,5 +1,6 @@
 import numpy
 from numpy import split
+import itertools
 
 
 def tests():
@@ -7,7 +8,6 @@ def tests():
     nodes_count = 2
     dim = 2
     output_nodes = 1
-
 
     weights = {}
     for j in range(inner_layers):
@@ -65,7 +65,47 @@ def tests():
         30: [0x08, 0x15, 0x02, 0x00, 0x00, 0x00, 0x00],
         31: [0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f]
     }
-    print([1, 2, 3][1:])
+    # print([1, 2, 3][1:])
+    a = [1, 2, 3, 4, 5, 6]
+    weights = {}
+    l = [3, 2, 3]
+    w = init_weights(l)
+    print(w)
+    w2 = flatten_weights(w)
+    print(w2)
+    g = unflatten_weights(w2, l)
+    print(g)
+
+def init_weights(layers: []):
+    weights = {}
+    for j in range(len(layers)):
+        if j != 0:
+            weights[j] = []
+            for i in range(layers[j]):
+                weights[j].append(numpy.random.uniform(-1, 1, size=(layers[j - 1] + 1)))
+    return weights
+
+def flatten_weights(weights: {}):
+    f_weight = []
+    for i in range(len(weights)):
+        for w in weights[i+1]:
+            for elem in w:
+                f_weight.append(elem)
+    return numpy.array(f_weight)
+
+
+def unflatten_weights(f_w, layers: []):
+    weights = {}
+    added = 0
+    for i in range(len(layers)):
+        if i != 0:
+            weights[i] = []
+            for j in range(layers[i]):
+                weights[i].append([])
+                for n in range(layers[i-1]+1):
+                    weights[i][j].append(f_w[added])
+                    added += 1
+    return weights
 
 
 if __name__ == "__main__":

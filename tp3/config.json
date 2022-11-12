@@ -1,12 +1,13 @@
 {
-  "cot": 500,
-  "n": 0.1,
-  "b": 1,
+  "cot": 100,
+  "n": 0.15,
+  "b": 0.8,
   "config_by_code": false,
   "momentum" : false,
-  "adaptative": true,
+  "adaptative": false,
   "adam" : false,
+  "powell" : true,
   "delta": 0.1,
   "percentage_train": 0.8,
-  "layers" : [7, 6, 5, 4, 3, 2, 3, 4, 5, 6, 7]
+  "layers" : [35, 20, 8, 5, 8, 20, 35]
 }

@@ -11,13 +11,16 @@ import csv
 from mpl_toolkits import mplot3d
 from tp2.declarations import Point
 from tp2.declarations import MultiPoint
+import itertools
+from scipy.optimize import minimize
+
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
 def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam=False, delta=0.2, percentage_train=0.5,
-                    layers=None):
+                    layers=None, powell = True):
     if layers is None:
         layers = []
     config_file = open("config.json")
@@ -32,6 +35,7 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
         delta = config_data["delta"]
         percentage_train = config_data["percentage_train"]
         layers = config_data["layers"]
+        powell = config_data["powell"]
 
     font = [
         [1, 0x04, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00],
@@ -67,9 +71,18 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
         [1, 0x08, 0x15, 0x02, 0x00, 0x00, 0x00, 0x00],
         [1, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f]
     ]
+
+    font_binary = []
+    for f in font:
+        binary = [1]
+        for i in range(len(f)):
+            if i != 0:
+                binary += hex_to_binary(f[i])
+        font_binary.append(binary)
     initial_points = []
     minExpected = math.inf
     maxExpected = -math.inf
+    font = font_binary
     for i in range(len(font)):
         for j in range(len(font[i])):
             if j > 0:
@@ -83,17 +96,20 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
             if j != 0:
                 expected.append(2 * (font[i][j] - minExpected) / (maxExpected - minExpected) - 1)
 
-        initial_points.append(Point(font[i], expected))
-
-    dim = 7
-
-    weights, errors, epocas, accuracy_array = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative, adam,
-                                                               layers)
+        initial_points.append(Point(font[i], font[i][1:]))
+    # p_combinations = list(itertools.combinations(initial_points, 30))
+    # print(len(p_combinations))
+    # for l in p_combinations:
+    #     weights, errors, epocas, accuracy_array = auto_encoder_run(l, n, cot, b, momentum, adaptative, adam,
+    #                                                            layers)
+    #     print(" ")
+    weights, errors, epocas, accuracy_array = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative,
+                                                               adam, layers, powell)
     return weights, errors, epocas, accuracy_array, initial_points
 
 
 def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, adaptative: bool, adam: bool,
-                     layers: []):
+                     layers: [], powell: bool):
     stop_index = 0
     error_min = math.inf
 
@@ -160,10 +176,22 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
             # print("2")
             error_dictionary = p_back(h_dictionary, o_dictionary[len(layers) - 1], layers, weights, b,
                                       point.expected_value)
-            # print("3")
-            delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, layers)
-            # print("4")
-            weights = calculate_new_weights(delta_w_dictionary, weights, layers)
+            if momentum and stop_index > 0:
+                # print("3")
+                previous_delta_w = copy.deepcopy(delta_w_dictionary)
+                delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, layers)
+                for i in range(len(delta_w_dictionary)):
+                    for j in range(len(delta_w_dictionary[i + 1])):
+                        for z in range(len(delta_w_dictionary[i + 1][j])):
+                            delta_w_dictionary[i + 1][j][z] -= previous_delta_w[i + 1][j][z] * alpha
+                # print("4")
+                weights = calculate_new_weights(delta_w_dictionary, weights, layers)
+            else:
+                delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, layers)
+                # print("4")
+                weights = calculate_new_weights(delta_w_dictionary, weights, layers)
+
+
 
             # END adam, momentum
 
@@ -189,14 +217,17 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
                 error_min = error
                 min_weights = weights
         errors.append(error)
-        # accuracy_array.append(
-        #   funcs.accuracy_multi_layer(encoder_weights, points, inner_layers, nodes_count, output_nodes, b))
+        accuracy_array.append(accuracy_multi_layer(weights, layers, points, b))
         stop_index += 1
 
     print(f"epocas: {stop_index}")
     print(f"min training error: {error_min}")
-
-    return weights, errors, epocas, accuracy_array
+    print(f"final accuracy: {accuracy_multi_layer(min_weights, layers, points, b)}")
+    if powell:
+        min_weights = minimize_weight(min_weights, points, b, layers)
+        print(f"new error: {calculate_multi_layer_error(points, min_weights, layers, b)}")
+        print(f"new accuracy: {accuracy_multi_layer(min_weights, layers, points, b)}")
+    return min_weights, errors, epocas, accuracy_array
 
 
 def init_weights(layers: []):
@@ -290,6 +321,73 @@ def calculate_multi_layer_error(points: [], weights: {}, layers: [], b: float):
             total_error += (point.expected_value[i] - o_dictionary[len(layers) - 1][i]) ** 2
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
     return total_error / (len(points) * dim)
+
+
+
+def calculate_multi_layer_error2( weights: [], layers: [], b: float, points: []):
+    total_error = 0
+    dim = layers[0]
+    w = unflatten_weights(weights, layers)
+    for point in points:
+        h_dictionary, o_dictionary = p_forward(layers, w, point, b)
+        for i in range(dim):
+            total_error += (point.expected_value[i] - o_dictionary[len(layers) - 1][i]) ** 2
+        # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
+    #print(total_error / (len(points) * dim))
+    return total_error / (len(points) * dim)
+
+
+
+
+def accuracy_multi_layer(weights: {}, layers: {}, points: [], b: float):
+    epsilon = 0.3
+    win = 0
+    dim = layers[0]
+    final_layer = len(layers) - 1
+    for point in points:
+        h_dictionary, o_dictionary = p_forward(layers, weights, point, b)
+        for i in range(dim):
+            calculated_value = o_dictionary[final_layer][i]
+            expected_value = point.expected_value[i]
+            if calculated_value - epsilon < expected_value < calculated_value + epsilon:
+                win += 1
+        # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
+    return win / (len(points) * dim)
+
+
+def minimize_weight(weights: {}, points: [], b: float, layers: []):
+    f_weights = flatten_weights(weights)
+    minimized_weights = minimize(fun=calculate_multi_layer_error2, x0=f_weights, args=(layers, b, points),
+                                 method="Powell", tol=0.01, options={'maxiter': 10})
+    weights = unflatten_weights(minimized_weights.x, layers)
+    return weights
+
+
+def flatten_weights(weights: {}):
+    f_weight = []
+    for i in range(len(weights)):
+        for w in weights[i+1]:
+            for elem in w:
+                f_weight.append(elem)
+    return numpy.array(f_weight)
+
+
+def unflatten_weights(f_w, layers: []):
+    weights = {}
+    added = 0
+    for i in range(len(layers)):
+        if i != 0:
+            weights[i] = []
+            for j in range(layers[i]):
+                weights[i].append([])
+                for n in range(layers[i-1]+1):
+                    weights[i][j].append(f_w[added])
+                    added += 1
+    return weights
+
+def hex_to_binary(value):
+    binary_array = [int(x) for x in bin(value)[2:].zfill(5)]
+    return binary_array
 
 
 if __name__ == "__main__":
