@@ -2,7 +2,7 @@
   "cot": 100,
   "n": 0.15,
   "b": 0.8,
-  "config_by_code": false,
+  "config_by_code": true,
   "momentum" : false,
   "adaptative": false,
   "adam" : false,
