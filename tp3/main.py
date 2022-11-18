@@ -14,13 +14,12 @@ from tp2.declarations import MultiPoint
 import itertools
 from scipy.optimize import minimize
 
-
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
 def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam=False, delta=0.2, percentage_train=0.5,
-                    layers=None, powell = True):
+                    layers=None, powell=True):
     if layers is None:
         layers = []
     config_file = open("config.json")
@@ -92,9 +91,11 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
                     maxExpected = font[i][j]
     for i in range(len(font)):
         expected = []
+        o = [1]
         for j in range(len(font[i])):
             if j != 0:
                 expected.append(2 * (font[i][j] - minExpected) / (maxExpected - minExpected) - 1)
+                o.append(2 * (font[i][j] - minExpected) / (maxExpected - minExpected) - 1)
 
         initial_points.append(Point(font[i], font[i][1:]))
     # p_combinations = list(itertools.combinations(initial_points, 30))
@@ -190,8 +191,6 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
                 delta_w_dictionary = calculate_delta_w(o_dictionary, error_dictionary, n, layers)
                 # print("4")
                 weights = calculate_new_weights(delta_w_dictionary, weights, layers)
-
-
 
             # END adam, momentum
 
@@ -323,8 +322,7 @@ def calculate_multi_layer_error(points: [], weights: {}, layers: [], b: float):
     return total_error / (len(points) * dim)
 
 
-
-def calculate_multi_layer_error2( weights: [], layers: [], b: float, points: []):
+def calculate_multi_layer_error2(weights: [], layers: [], b: float, points: []):
     total_error = 0
     dim = layers[0]
     w = unflatten_weights(weights, layers)
@@ -333,10 +331,8 @@ def calculate_multi_layer_error2( weights: [], layers: [], b: float, points: [])
         for i in range(dim):
             total_error += (point.expected_value[i] - o_dictionary[len(layers) - 1][i]) ** 2
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
-    #print(total_error / (len(points) * dim))
+    # print(total_error / (len(points) * dim))
     return total_error / (len(points) * dim)
-
-
 
 
 def accuracy_multi_layer(weights: {}, layers: {}, points: [], b: float):
@@ -366,7 +362,7 @@ def minimize_weight(weights: {}, points: [], b: float, layers: []):
 def flatten_weights(weights: {}):
     f_weight = []
     for i in range(len(weights)):
-        for w in weights[i+1]:
+        for w in weights[i + 1]:
             for elem in w:
                 f_weight.append(elem)
     return numpy.array(f_weight)
@@ -380,10 +376,11 @@ def unflatten_weights(f_w, layers: []):
             weights[i] = []
             for j in range(layers[i]):
                 weights[i].append([])
-                for n in range(layers[i-1]+1):
+                for n in range(layers[i - 1] + 1):
                     weights[i][j].append(f_w[added])
                     added += 1
     return weights
+
 
 def hex_to_binary(value):
     binary_array = [int(x) for x in bin(value)[2:].zfill(5)]
