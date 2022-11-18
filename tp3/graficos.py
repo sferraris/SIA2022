@@ -142,14 +142,33 @@ def error_vs_epocas():
     layers_10 = [35, 31, 23, 19, 17, 13, 11, 7, 5, 3, 2, 3, 5, 7, 11, 13, 17, 19, 23, 31, 35]
     all_layers = [layers_0, layers_1, layers_2, layers_3, layers_4, layers_5, layers_6, layers_7, layers_8, layers_9,
                   layers_10]
-    all_layers = [layers_0]
-    fig, ax = plt.subplots()
+    all_layers = [layers_7]
     c = 0x61
     for layer in all_layers:
         weights, errors, epocas, accuracy_array, initial_points = autoencoder_run(cot, n, b, False, False, False, 0.2,
                                                                                   0.5,
                                                                                   layer, False)
+        f = open(f"./Results/ErrorVsEpocas/layer_{c}", "w")
+        for i in range(len(epocas)):
+            f.write(f"{epocas[i]} {errors[i]}\n")
+        f.close()
+        c += 1
 
+def error_vs_epocas_graph():
+    fig, ax = plt.subplots()
+    c = 0x61
+    for i in range(2):
+        epocas = []
+        errors = []
+        f = open(f"./Results/ErrorVsEpocas/layer_{c}")
+        lines = f.readlines()
+        for line in lines:
+            info_arr = line.split(' ')
+            epocas.append(int(info_arr[0]))
+            errors.append(float(info_arr[1].split('\n')[0]))
+        f.close()
+        print(epocas)
+        print(errors)
         ax.plot(epocas, errors, label=chr(c))
         c += 1
 
@@ -160,10 +179,10 @@ def error_vs_epocas():
 
     plt.show()
 
-
 def main():
-    #show_letters()
-    error_vs_epocas()
+    # show_letters()
+    # error_vs_epocas()
+    error_vs_epocas_graph()
 
 
 if __name__ == "__main__":
