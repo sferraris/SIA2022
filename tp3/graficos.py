@@ -4,7 +4,7 @@ import matplotlib
 import numpy
 from matplotlib import pyplot as plt
 import tp2.main as funcs
-
+from ast import literal_eval
 from main import autoencoder_run
 from main import p_forward
 from tp2.declarations import Point
@@ -107,7 +107,8 @@ def show_letters():
                 a.append(v)
                 v = []
 
-            v.append(1 if font_char[char] > 0.5 else -1)
+            # v.append(1 if font_char[char] > 0.5 else -1)
+            v.append(font_char[char])
         a.append(v)
         array = numpy.array(a)
         img = plt.imshow(1 - array, interpolation='nearest',
@@ -116,13 +117,13 @@ def show_letters():
 
         value2 += 1
 
-        plt.savefig("/Users/micacapart/Documents/ITBA/Test3/test" + str(value) + ".png", bbox_inches='tight')
+        plt.savefig("./Results/Img/res" + str(value) + ".png", bbox_inches='tight')
 
 
 def error_vs_epocas():
     b = 0.8
-    n = 0.15
-    cot = 100
+    n = 0.01
+    cot = 1
     layers_0 = [35, 20, 8, 2, 8, 20, 35]
     layers_1 = [35, 30, 25, 20, 15, 10, 5, 2, 5, 10, 15, 20, 25, 30, 35]
     layers_2 = [35, 25, 15, 5, 2, 5, 15, 25, 35]
@@ -142,22 +143,54 @@ def error_vs_epocas():
     layers_10 = [35, 31, 23, 19, 17, 13, 11, 7, 5, 3, 2, 3, 5, 7, 11, 13, 17, 19, 23, 31, 35]
     all_layers = [layers_0, layers_1, layers_2, layers_3, layers_4, layers_5, layers_6, layers_7, layers_8, layers_9,
                   layers_10]
-    all_layers = [layers_7]
+    all_layers = [layers_0]
     c = 0x61
-    for layer in all_layers:
+    all_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    for j in range(len(all_layers)):
         weights, errors, epocas, accuracy_array, initial_points = autoencoder_run(cot, n, b, False, False, False, 0.2,
                                                                                   0.5,
-                                                                                  layer, False)
-        f = open(f"./Results/ErrorVsEpocas/layer_{c}", "w")
+                                                                                  all_layers[j], False)
+        save_autoencoder(weights,all_layers[j],all_labels[j])
+        f = open(f"./Results/ErrorVsEpocas/layer_{all_labels[j]}", "w")
         for i in range(len(epocas)):
             f.write(f"{epocas[i]} {errors[i]}\n")
         f.close()
         c += 1
 
+def save_autoencoder(weights: {}, layers: [], layer_id: int):
+    f = open(f"./Results/Autoencoders/layer_{layer_id}", 'w')
+    f.write(str(layers) + "\n")
+    for j in range(len(layers)):
+        if j != 0:
+            for i in range(layers[j]):
+                f.write("[")
+                for w in weights[j][i]:
+                    f.write(str(w) + ", ")
+                f.write("]\n")
+    f.close()
+
+def read_autoencoder(layer_id: int):
+    f = open(f"./Results/Autoencoders/layer_{layer_id}")
+    lines = f.readlines()
+    print(len(lines))
+    layers = literal_eval(lines[0])
+    weights = {}
+    index = 1
+    weights[index] = []
+    for i in range(len(lines[1:])):
+        weight = literal_eval(lines[1:][i])
+        weights[index].append(weight)
+        if len(weights[index]) == layers[index]:
+            index += 1
+            if index != len(layers):
+                weights[index] = []
+    f.close()
+    return weights, layers
 def error_vs_epocas_graph():
     fig, ax = plt.subplots()
     c = 0x61
-    for i in range(2):
+    for i in range(1):
         epocas = []
         errors = []
         f = open(f"./Results/ErrorVsEpocas/layer_{c}")
@@ -182,7 +215,9 @@ def error_vs_epocas_graph():
 def main():
     # show_letters()
     # error_vs_epocas()
-    error_vs_epocas_graph()
+    # error_vs_epocas_graph()
+    # save_autoencoder({}, [0, 1, 2, 3], 84)
+    read_autoencoder()
 
 
 if __name__ == "__main__":

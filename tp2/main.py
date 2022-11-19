@@ -296,11 +296,13 @@ def calculate_multi_layer_error(points: [], inner_layers: int, weights: {}, node
 def calculate_o(h: float, b: float):
     return math.tanh(b * h)
     # return numpy.sign(h)
+    # return 1/(1 + math.exp(-b*h*2))
 
 
 def calculate_o_derivative(h: float, b: float):
     return b * (1 - calculate_o(h, b) ** 2)
     # return 1
+    # return 2*b*calculate_o(h, b) * (1 - calculate_o(h, b))
 
 
 def array_prod(arr1: [], arr2: []):
