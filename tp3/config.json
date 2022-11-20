@@ -9,5 +9,6 @@
   "powell" : true,
   "delta": 0.1,
   "percentage_train": 0.8,
-  "layers" : [35, 20, 8, 5, 8, 20, 35]
+  "layers" : [35, 20, 8, 5, 8, 20, 35],
+  "denoising_chance": 0.15
 }

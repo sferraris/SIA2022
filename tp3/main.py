@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 
 def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam=False, delta=0.2, percentage_train=0.5,
-                    layers=None, powell=True):
+                    layers=None, powell=True, initial_weights=None, denoising_chance=0):
     if layers is None:
         layers = []
     config_file = open("config.json")
@@ -35,6 +35,7 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
         percentage_train = config_data["percentage_train"]
         layers = config_data["layers"]
         powell = config_data["powell"]
+        denoising_chance = config_data["denoising_chance"]
 
     font = [
         [1, 0x04, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00],
@@ -90,27 +91,31 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
                 if font[i][j] > maxExpected:
                     maxExpected = font[i][j]
     for i in range(len(font)):
-        expected = []
-        o = [1]
+        original_values = copy.deepcopy(font[i][1:])
         for j in range(len(font[i])):
             if j != 0:
-                expected.append(2 * (font[i][j] - minExpected) / (maxExpected - minExpected) - 1)
-                o.append(2 * (font[i][j] - minExpected) / (maxExpected - minExpected) - 1)
+                if font[i][j] == 1 and denoising_chance > 0:
+                    r = random.randint(0, 1)
+                    if r <= denoising_chance:
+                        font[i][j] += random.randint(-1, 1) * delta
+        initial_points.append(Point(font[i], original_values))
 
-        initial_points.append(Point(font[i], font[i][1:]))
+
     # p_combinations = list(itertools.combinations(initial_points, 30))
     # print(len(p_combinations))
     # for l in p_combinations:
     #     weights, errors, epocas, accuracy_array = auto_encoder_run(l, n, cot, b, momentum, adaptative, adam,
     #                                                            layers)
     #     print(" ")
+
+
     weights, errors, epocas, accuracy_array = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative,
-                                                               adam, layers, powell)
+                                                               adam, layers, powell, initial_weights)
     return weights, errors, epocas, accuracy_array, initial_points
 
 
 def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, adaptative: bool, adam: bool,
-                     layers: [], powell: bool):
+                     layers: [], powell: bool, initial_weights=None):
     stop_index = 0
     error_min = math.inf
 
@@ -130,7 +135,11 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
 
     # encoder_weights = funcs.init_weights(inner_layers, nodes_count, dim, output_nodes)
     # decoder_weights = funcs.init_weights(inner_layers, nodes_count, output_nodes, dim)
-    weights = init_weights(layers)
+
+    if initial_weights is None:
+        weights = init_weights(layers)
+    else:
+        weights = initial_weights
 
     # Parametros para salida, hay que redefinirlos pero no duplicarlos
     errors = []

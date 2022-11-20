@@ -123,7 +123,7 @@ def show_letters():
 def error_vs_epocas():
     b = 0.8
     n = 0.01
-    cot = 1
+    cot = 1000
     layers_0 = [35, 20, 8, 2, 8, 20, 35]
     layers_1 = [35, 30, 25, 20, 15, 10, 5, 2, 5, 10, 15, 20, 25, 30, 35]
     layers_2 = [35, 25, 15, 5, 2, 5, 15, 25, 35]
@@ -141,11 +141,9 @@ def error_vs_epocas():
         if i > 2:
             layers_9.append(i)
     layers_10 = [35, 31, 23, 19, 17, 13, 11, 7, 5, 3, 2, 3, 5, 7, 11, 13, 17, 19, 23, 31, 35]
-    all_layers = [layers_0, layers_1, layers_2, layers_3, layers_4, layers_5, layers_6, layers_7, layers_8, layers_9,
-                  layers_10]
-    all_layers = [layers_0]
+    all_layers = [layers_0, layers_1, layers_2]
     c = 0x61
-    all_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    all_labels = [0, 1, 2]
 
     for j in range(len(all_layers)):
         weights, errors, epocas, accuracy_array, initial_points = autoencoder_run(cot, n, b, False, False, False, 0.2,
@@ -158,7 +156,7 @@ def error_vs_epocas():
         f.close()
         c += 1
 
-def save_autoencoder(weights: {}, layers: [], layer_id: int):
+def save_autoencoder(weights: {}, layers: [], layer_id):
     f = open(f"./Results/Autoencoders/layer_{layer_id}", 'w')
     f.write(str(layers) + "\n")
     for j in range(len(layers)):
@@ -190,10 +188,11 @@ def read_autoencoder(layer_id: int):
 def error_vs_epocas_graph():
     fig, ax = plt.subplots()
     c = 0x61
-    for i in range(1):
+    all_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10]
+    for label in all_labels:
         epocas = []
         errors = []
-        f = open(f"./Results/ErrorVsEpocas/layer_{c}")
+        f = open(f"./Results/ErrorVsEpocas/layer_{label}")
         lines = f.readlines()
         for line in lines:
             info_arr = line.split(' ')
@@ -202,7 +201,7 @@ def error_vs_epocas_graph():
         f.close()
         print(epocas)
         print(errors)
-        ax.plot(epocas, errors, label=chr(c))
+        ax.plot(epocas, errors, label=label)
         c += 1
 
     ax.set_xlabel('Epocas')
@@ -212,12 +211,35 @@ def error_vs_epocas_graph():
 
     plt.show()
 
+def n_and_epochs_combined():
+    b = 0.8
+    layers = [35, 28, 15, 7, 2, 7, 15, 28, 35]
+    c = 0x61
+    all_labels = ['0.1_1000', '0.1_3000', '0.1_5000', '0.01_1000', '0.01_3000', '0.01_5000', '0.001_1000', '0.001_3000', '0.001_5000']
+
+    n_array = [0.1, 0.01, 0.001]
+    cot_array = [1000, 3000, 5000]
+    label_index = 0
+    for n_index in range(len(n_array)):
+        for cot_index in range(len(cot_array)):
+            weights, errors, epocas, accuracy_array, initial_points = autoencoder_run(cot_array[cot_index], n_array[n_index], b, False, False, False, 0.2,
+                                                                                      0.5,
+                                                                                      layers, False)
+            save_autoencoder(weights, layers, all_labels[label_index])
+            f = open(f"./Results/NAndEpochs/layer_{all_labels[label_index]}", "w")
+            for i in range(len(epocas)):
+                f.write(f"{epocas[i]} {errors[i]}\n")
+            f.close()
+            label_index += 1
+            c += 1
+
 def main():
     # show_letters()
     # error_vs_epocas()
     # error_vs_epocas_graph()
     # save_autoencoder({}, [0, 1, 2, 3], 84)
-    read_autoencoder()
+    # read_autoencoder()
+    n_and_epochs_combined()
 
 
 if __name__ == "__main__":
