@@ -144,16 +144,16 @@ def error_vs_epocas():
         if i > 2:
             layers_9.append(i)
     layers_10 = [35, 31, 23, 19, 17, 13, 11, 7, 5, 3, 2, 3, 5, 7, 11, 13, 17, 19, 23, 31, 35]
-    all_layers = [layers_0, layers_1, layers_2]
+    all_layers = [layers_4, layers_5]
     c = 0x61
-    all_labels = [0, 1, 2]
+    all_labels = ['denoising_0.2', 'denoising_0.2']
 
     for j in range(len(all_layers)):
-        weights, errors, epocas, accuracy_array, initial_points = autoencoder_run(cot, n, b, False, False, False, 0.2,
+        weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False, 0.2,
                                                                                   0.5,
-                                                                                  all_layers[j], False)
-        #save_autoencoder(weights,all_layers[j],all_labels[j])
-        f = open(f"./Results/ErrorVsEpocas/layer_{all_labels[j]}", "w")
+                                                                                  all_layers[j], False, None, 0.2)
+        save_autoencoder(weights,all_layers[j],all_labels[j])
+        f = open(f"./Results/ErrorVsEpocasDenoising/layer_{all_labels[j]}", "w")
         for i in range(len(epocas)):
             f.write(f"{epocas[i]} {errors[i]}\n")
         f.close()
@@ -191,6 +191,7 @@ def error_vs_epocas_graph():
     fig, ax = plt.subplots()
     c = 0x61
     all_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    #all_labels = ['denoising_0.2_4', 'denoising_0.2_5']
     for label in all_labels:
         epocas = []
         errors = []
@@ -208,9 +209,40 @@ def error_vs_epocas_graph():
     ax.set_ylabel('Error')
     ax.set_title('Autoencoder')
     ax.legend()
-    fig.savefig("./Results/ErrorVsEpocas/ErorVsEpocasArquis.png", bbox_inches='tight', dpi=1800)
+    #fig.savefig("./Results/ErrorVsEpocas/ErorVsEpocasArquis.png", bbox_inches='tight', dpi=1800)
 
-    #plt.show()
+    plt.show()
+def error_vs_denoising():
+    fig, ax = plt.subplots()
+    b = 0.8
+    denoising_values = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+    n = 0.01
+    cot = 300
+    layers_4 = [35, 27, 19, 11, 2, 11, 19, 27, 35]
+    x_vals = []
+    y_errors = []
+    y_vals = []
+    for denoising in denoising_values:
+        min_errors = []
+        f = open(f"./Results/ErrorVsDenoising/denoising_{denoising}", "w")
+        for i in range(5):
+            print(f"{denoising} {i}")
+            weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False, 0.2,
+                                                                                      0.5,
+                                                                                      layers_4, False, None, denoising)
+            min_errors.append(error_min)
+            f.write(str(error_min) + "\n")
+        f.close()
+        y_vals.append(numpy.mean(min_errors))
+        y_errors.append(numpy.std(min_errors))
+        x_vals.append(denoising)
+    ax.errorbar(x_vals, y_vals, xerr=numpy.zeros(len(y_vals)), yerr=y_errors, fmt='-o')
+    ax.set_xlabel('Denoising Chance')
+    ax.set_ylabel('Error')
+    ax.set_title('Autoencoder')
+
+    fig.savefig("./Results/ErrorVsDenoising/result.png", bbox_inches='tight', dpi=1800)
+
 def error_vs_b():
     fig, ax = plt.subplots()
     b_values = [0.83]
@@ -269,6 +301,32 @@ def graph_error_vs_b():
     fig.savefig("./Results/error_vs_b/result.png", bbox_inches='tight')
 
     #plt.show()
+
+def graph_error_vs_denoising():
+    fig, ax = plt.subplots()
+    x_vals = []
+    y_errors = []
+    y_vals = []
+    denoising_values = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+    for i in range(len(denoising_values)):
+        f = open(f"./Results/ErrorVsDenoising/denoising_{denoising_values[i]}")
+        lines = f.readlines()
+        min_errors = []
+        for line in lines:
+            info_arr = line.split(' ')
+            min_errors.append(float(info_arr[0]))
+        y_vals.append(numpy.mean(min_errors))
+        y_errors.append(numpy.std(min_errors))
+        x_vals.append(denoising_values[i])
+        f.close()
+    ax.errorbar(x_vals, y_vals, xerr=numpy.zeros(len(y_vals)), yerr=y_errors, fmt='-o')
+    ax.set_xlabel('Denoising Chance')
+    ax.set_ylabel('Error')
+    ax.set_title('Autoencoder')
+
+    fig.savefig("./Results/ErrorVsDenoising/result.png", bbox_inches='tight')
+
+    plt.show()
 def n_and_epochs_combined():
     b = 0.8
     layers = [35, 28, 15, 7, 2, 7, 15, 28, 35]
@@ -317,14 +375,16 @@ def error_vs_epocas_graph_n_epochs():
     fig.savefig("./Results/NAndEpochs/ErorVsEpocas.png", bbox_inches='tight', dpi=1800)
 
 def main():
-    show_letters()
-    #error_vs_epocas()
-    #error_vs_epocas_graph()
+    # show_letters()
+    # error_vs_epocas()
+    # error_vs_epocas_graph()
     # save_autoencoder({}, [0, 1, 2, 3], 84)
     #n_and_epochs_combined()
     #error_vs_b()
     #graph_error_vs_b()
     #error_vs_epocas_graph_n_epochs()
+    error_vs_denoising()
+    #graph_error_vs_denoising()
 
 
 if __name__ == "__main__":
