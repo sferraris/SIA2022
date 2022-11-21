@@ -109,9 +109,9 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
     #     print(" ")
 
 
-    weights, errors, epocas, accuracy_array = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative,
+    weights, errors, epocas, accuracy_array, error_min = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative,
                                                                adam, layers, powell, initial_weights)
-    return weights, errors, epocas, accuracy_array, initial_points
+    return weights, errors, epocas, accuracy_array, initial_points, error_min
 
 
 def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, adaptative: bool, adam: bool,
@@ -121,7 +121,7 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
 
     # ADAPTATIVE/MOMENTUM
     alpha = 0.8
-    max_error_progress = 2
+    max_error_progress = 10
     # END ADAPTATIVE/MOMENTUM
 
     # ADAM
@@ -172,7 +172,7 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
     # END error progress
 
     while error_min > 1E-3 and stop_index < cot:
-        print(f"{(stop_index / cot) * 100}%")
+        print(f"{(stop_index / cot) * 100}% - {error} - {n}")
         indexes = list(range(len(points)))
         numpy.random.shuffle(indexes)
         # random_index = random.randint(0, len(points) - 1)
@@ -217,9 +217,9 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
                         error_progress = 0
                     error_progress += 1
                 if error_progress == max_error_progress:
-                    n -= n * 0.03
+                    n -= n * 0.0003
                 if error_progress == -max_error_progress:
-                    n += 0.01
+                    n += 0.0005
 
             if error <= error_min:
                 error_min = error
@@ -235,7 +235,7 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
         min_weights = minimize_weight(min_weights, points, b, layers)
         print(f"new error: {calculate_multi_layer_error(points, min_weights, layers, b)}")
         print(f"new accuracy: {accuracy_multi_layer(min_weights, layers, points, b)}")
-    return min_weights, errors, epocas, accuracy_array
+    return min_weights, errors, epocas, accuracy_array, error_min
 
 
 def init_weights(layers: []):

@@ -5,7 +5,6 @@
   "config_by_code": true,
   "momentum" : false,
   "adaptative": false,
-  "adam" : false,
   "powell" : true,
   "delta": 0.1,
   "percentage_train": 0.8,
