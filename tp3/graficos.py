@@ -3,11 +3,13 @@ import platform
 
 import matplotlib
 import numpy
+from PIL import Image
 from matplotlib import pyplot as plt
 import tp2.main as funcs
 from ast import literal_eval
 from main import autoencoder_run
 from main import p_forward
+from main import get_font
 from tp2.declarations import Point
 
 if platform.system() == 'Darwin':
@@ -394,7 +396,7 @@ def error_vs_epocas_graph_n_epochs():
 
 
 def latent_space_letter_generator():
-    weights, layers = read_autoencoder("denoising-l5")
+    weights, layers = read_autoencoder("show_letters_custom_9_6_3_2_powell")
     b = 0.8
     size = len(layers)
     print(layers)
@@ -402,10 +404,11 @@ def latent_space_letter_generator():
     autoencoder_layers = layers[(int(size / 2)):]
     print(int(size / 2) + 1)
     new_w = {}
+    letter_size = 9
+    row_size = 3
     for i in range(int(size / 2)):
         new_w[i + 1] = weights[i + int(size / 2) + 1]
 
-    x_values = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1]
     x_values = []
     for i in range(21):
         x_values.append(-1 + i * 0.1)
@@ -417,15 +420,13 @@ def latent_space_letter_generator():
     count = 0
     for x in x_values:
         for y in reversed(y_values):
-            new_x = numpy.random.uniform(-1, 1)
-            new_y = numpy.random.uniform(-1, 1)
             p = Point([1, x, y], [])
             h_dictionary_encoder, o_dictionary_encoder = p_forward(autoencoder_layers, new_w, p, 0.8)
             a = []
             v = []
             font_char = o_dictionary_encoder[int(size / 2)]
-            for char in range(35):
-                if char % 5 == 0 and char != 0:
+            for char in range(letter_size):
+                if char % row_size == 0 and char != 0:
                     a.append(v)
                     v = []
 
@@ -436,13 +437,13 @@ def latent_space_letter_generator():
             ax = axs[count1, count2]
             ax.imshow(1 - array, interpolation='nearest', cmap="gray")
             ax.axis('off')
-            ax.set_title(f'[{round(x, 2)}, {round(y, 2)}]', fontsize=3)
+            #ax.set_title(f'[{round(x, 2)}, {round(y, 2)}]', fontsize=3)
             count1 += 1
         count2 += 1
         count1 = 0
-    fig.tight_layout(pad=1.5)
+    fig.tight_layout(pad=0.5)
 
-    plt.savefig(f"./Results/NewLetters/letter_gen_big3.png", bbox_inches='tight', dpi=1800)
+    plt.savefig(f"./Results/NewLetters/letter_gen_big_custom.png", bbox_inches='tight', dpi=1800)
 
 
 def latent_space_letter_generator_single():
@@ -487,7 +488,7 @@ def latent_space_letter_generator_single():
 def show_letters_custom():
     b = 0.8
     n = 0.01
-    cot = 1000
+    cot = 3000
     layers = [9, 6, 3, 2, 3, 6, 9]
     font_size = 8
     letter_size = 9
@@ -541,6 +542,35 @@ def show_letters_custom():
         value += 1
 
         plt.savefig("./Results/CustomImg/res_output.png", bbox_inches='tight', dpi=1800)
+
+def show_letters_custom_images():
+    w, h = 100, 75
+
+
+    b = 0.8
+    n = 0.01
+    cot = 100
+    layers = [30000, 3, 30000]
+    font_size = 4
+    letter_size = 30000
+
+    print("Autoencoder")
+    weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
+                                                                                         0.2, 0.5,
+                                                                                         layers, False, None, 0, True)
+    index = 1
+    for p in initial_points:
+        h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
+        font_char = o_dictionary_encoder[len(layers) - 1]
+        image = []
+        for pixel in font_char:
+            image.append(int(pixel * 255))
+        data = numpy.reshape(image, (w, h, 4))
+        img = Image.fromarray(data.astype('uint8'), 'RGBA')
+        img.save(f'./Results/SouthPark/gen_{index}.png')
+        index += 1
+
+
 def main():
     # graph_results_latent_space()
     # show_letters()
@@ -554,9 +584,10 @@ def main():
     # error_vs_denoising()
     # graph_error_vs_denoising()
     # latent_space_letter_generator_single()
-    # latent_space_letter_generator()
-    graph_error_vs_denoising()
-    show_letters_custom()
+    #latent_space_letter_generator()
+    # graph_error_vs_denoising()
+    # show_letters_custom()
+    show_letters_custom_images()
 
 
 if __name__ == "__main__":

@@ -13,6 +13,8 @@ from tp2.declarations import Point
 from tp2.declarations import MultiPoint
 import itertools
 from scipy.optimize import minimize
+from PIL import Image
+import numpy as np
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -25,13 +27,21 @@ def get_font(value: bool):
             [1, 1, 0, 1, 1, 0, 1, 1, 1, 1],
             [1, 1, 0, 0, 1, 0, 0, 1, 1, 1],
             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
             [1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
-            [1, 1, 1, 1, 1, 0, 1, 1, 0, 1]
+            [1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+            [1, 1, 1, 1, 1, 0, 0, 1, 0, 0],
         ]
     else:
-        return []
+        font = []
+        for img_index in range(4):
+            path = f'./Results/SouthPark/{img_index+1}.png'
+            image = Image.open(path).convert('RGBA')
+            image = np.asarray(image)
+            flatten_img = np.asarray(image.flatten()) / 255.0
+            a = numpy.concatenate(([1], flatten_img))
+            font.append(a)
+        return font
 def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam=False, delta=0.2, percentage_train=0.5,
                     layers=None, powell=True, initial_weights=None, denoising_chance=0, custom_font = False):
     if layers is None:
@@ -44,7 +54,6 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
         b = config_data["b"]
         momentum = config_data["momentum"]
         adaptative = config_data["adaptative"]
-        adam = config_data["adam"]
         delta = config_data["delta"]
         percentage_train = config_data["percentage_train"]
         layers = config_data["layers"]
@@ -53,7 +62,7 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
         custom_font = config_data["custom_font"]
 
     if custom_font:
-        font = get_font(True)
+        font = get_font(False)
     else:
         font = [
             [1, 0x04, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00],
@@ -180,7 +189,7 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
     # Cree @micus que es para adaptative, vemos dsps
     error_progress = 0
     # END error progress
-
+    print("While")
     while error_min > 1E-3 and stop_index < cot:
         print(f"{(stop_index / cot) * 100}% - {error} - {n}")
         indexes = list(range(len(points)))
