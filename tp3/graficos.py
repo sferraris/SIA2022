@@ -374,6 +374,63 @@ def error_vs_epocas_graph_n_epochs():
     ax.legend()
     fig.savefig("./Results/NAndEpochs/ErorVsEpocas.png", bbox_inches='tight', dpi=1800)
 
+def show_letters_custom():
+    b = 0.8
+    n = 0.01
+    cot = 1000
+    layers = [9, 6, 3, 2, 3, 6, 9]
+    font_size = 8
+    letter_size = 9
+    row_size = 3
+
+    weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
+                                                                                         0.2, 0.5,
+                                                                                         layers, True, None, 0, True)
+
+    save_autoencoder(weights, layers, 'show_letters_custom_9_6_3_2_powell')
+    value = 1
+    for p in initial_points:
+        font_char = p.e[1:]
+        a = []
+        v = []
+        plt.subplot(1, font_size, value)
+        for char in range(letter_size):
+            if char % row_size == 0 and char != 0:
+                a.append(v)
+                v = []
+
+            v.append(font_char[char])
+        a.append(v)
+        array = numpy.array(a)
+        plt.imshow(1 - array, interpolation='nearest',
+                   cmap="gray")
+        plt.axis('off')
+        value += 1
+
+    plt.savefig(f"./Results/CustomImg/res_input.png", bbox_inches='tight', dpi=1800)
+    value = 1
+    for p in initial_points:
+        h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
+        plt.subplot(1, font_size, value)
+        font_char = o_dictionary_encoder[len(layers) - 1]
+        a = []
+        v = []
+        for char in range(letter_size):
+            if char % row_size == 0 and char != 0:
+                a.append(v)
+                v = []
+
+            # v.append(1 if font_char[char] > 0.5 else -1)
+            v.append(font_char[char])
+        a.append(v)
+        array = numpy.array(a)
+        img = plt.imshow(1 - array, interpolation='nearest',
+                         cmap="gray")
+        plt.axis('off')
+
+        value += 1
+
+        plt.savefig("./Results/CustomImg/res_output.png", bbox_inches='tight', dpi=1800)
 def main():
     # show_letters()
     # error_vs_epocas()
@@ -383,8 +440,9 @@ def main():
     #error_vs_b()
     #graph_error_vs_b()
     #error_vs_epocas_graph_n_epochs()
-    error_vs_denoising()
+    # error_vs_denoising()
     #graph_error_vs_denoising()
+    show_letters_custom()
 
 
 if __name__ == "__main__":
