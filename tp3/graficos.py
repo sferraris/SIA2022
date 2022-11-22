@@ -528,18 +528,28 @@ def show_letters_custom_images():
 
     b = 0.8
     n = 0.01
-    cot = 5000
-    layers = [324, 212, 106, 53, 26, 3, 2, 3, 26, 53, 106, 212, 324]
-    #layers = [3136, 3, 2, 3, 3136]
+    cot = 1
+    layers1 = [324, 212, 106, 53, 26, 3, 2, 3, 26, 53, 106, 212, 324]
+    layers2 = [324, 10, 3, 2, 3, 10, 324]
+    layers3 = [324, 200, 100, 50, 2, 50, 100, 200, 324]
+    layers4 = [324, 150, 50, 2, 50, 150, 324]
+    layers5 = [324, 300, 275, 250, 225, 200, 175, 150, 125, 100, 75, 50, 25, 2, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 324]
+    layersArray = [ layers5, layers4, layers3, layers2, layers1]
+    all_labels = [ "layers5", "layers4", "layers3", "layers2", "layers1"]
     font_size = 4
     letter_size = 30000
 
     print("Autoencoder")
-    weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
+    for i in range(len(layersArray)):
+        weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
                                                                                         0.2, 0.5,
-                                                                                     layers, False, None, 0, True)
-    save_autoencoder(weights, layers, "numbers_powell_3")
-
+                                                                                     layersArray[i], False, None, 0, True)
+        save_autoencoder(weights, layersArray[i], f"numbers_{all_labels[i]}")
+        f = open(f"./Results/Numbers/ErrorVsEpocas/layer_{all_labels[i]}", "w")
+        for i in range(len(epocas)):
+            f.write(f"{epocas[i]} {errors[i]}\n")
+        f.close()
+    """
     index = 1
     for p in initial_points:
         h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
@@ -553,7 +563,7 @@ def show_letters_custom_images():
         img = Image.fromarray(data.astype('uint8'), 'L')
         img.save(f'./Results/Numbers/gen2_{index}.png')
         index += 1
-
+"""
 def latent_space_letter_custom_gen():
     weights, layers = read_autoencoder("numbers")
     b = 0.8
