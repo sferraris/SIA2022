@@ -34,16 +34,20 @@ def get_font(value: bool):
         ]
     else:
         font = []
-        for img_index in range(4):
-            path = f'./Results/SouthPark/{img_index+1}.png'
-            image = Image.open(path).convert('RGBA')
+        for img_index in range(10):
+            path = f'./Results/Numbers/{img_index}.jpg'
+            image = Image.open(path).convert('L')
             image = np.asarray(image)
-            flatten_img = np.asarray(image.flatten()) / 255.0
+            max = numpy.max(image.flatten())
+            min = numpy.min(image.flatten())
+            flatten_img = np.asarray(2 * (image.flatten() - min) / (max - min) - 1)
             a = numpy.concatenate(([1], flatten_img))
             font.append(a)
         return font
+
+
 def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam=False, delta=0.2, percentage_train=0.5,
-                    layers=None, powell=True, initial_weights=None, denoising_chance=0, custom_font = False):
+                    layers=None, powell=True, initial_weights=None, denoising_chance=0, custom_font=False):
     if layers is None:
         layers = []
     config_file = open("config.json")
@@ -113,12 +117,11 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
         original_values = copy.deepcopy(font[i][1:])
         for j in range(len(font[i])):
             if j != 0:
-                if font[i][j] == 1 and denoising_chance > 0:
+                if denoising_chance > 0:
                     r = random.randint(0, 1)
                     if r <= denoising_chance:
                         font[i][j] += random.randint(-1, 1) * delta
         initial_points.append(Point(font[i], original_values))
-
 
     # p_combinations = list(itertools.combinations(initial_points, 30))
     # print(len(p_combinations))
@@ -127,9 +130,9 @@ def autoencoder_run(cot=1000, n=0.1, b=1, momentum=False, adaptative=False, adam
     #                                                            layers)
     #     print(" ")
 
-
-    weights, errors, epocas, accuracy_array, error_min = auto_encoder_run(initial_points, n, cot, b, momentum, adaptative,
-                                                               adam, layers, powell, initial_weights)
+    weights, errors, epocas, accuracy_array, error_min = auto_encoder_run(initial_points, n, cot, b, momentum,
+                                                                          adaptative,
+                                                                          adam, layers, powell, initial_weights)
     return weights, errors, epocas, accuracy_array, initial_points, error_min
 
 
@@ -191,7 +194,7 @@ def auto_encoder_run(points: [], n: float, cot: int, b: float, momentum: bool, a
     # END error progress
     print("While")
     while error_min > 1E-3 and stop_index < cot:
-        print(f"{(stop_index / cot) * 100}% - {error} - {n}")
+        print(f"{(stop_index / cot) * 100}% - {error}")
         indexes = list(range(len(points)))
         numpy.random.shuffle(indexes)
         # random_index = random.randint(0, len(points) - 1)
@@ -353,6 +356,7 @@ def calculate_multi_layer_error(points: [], weights: {}, layers: [], b: float):
 def calculate_multi_layer_error2(weights: [], layers: [], b: float, points: []):
     total_error = 0
     dim = layers[0]
+    global Error
     w = unflatten_weights(weights, layers)
     for point in points:
         h_dictionary, o_dictionary = p_forward(layers, w, point, b)
@@ -360,6 +364,7 @@ def calculate_multi_layer_error2(weights: [], layers: [], b: float, points: []):
             total_error += (point.expected_value[i] - o_dictionary[len(layers) - 1][i]) ** 2
         # print(f"{point.expected_value}  y el calculado {o_dictionary[inner_layers + 1][i]}")
     # print(total_error / (len(points) * dim))
+    Error = total_error / (len(points) * dim)
     return total_error / (len(points) * dim)
 
 
@@ -382,9 +387,19 @@ def accuracy_multi_layer(weights: {}, layers: {}, points: [], b: float):
 def minimize_weight(weights: {}, points: [], b: float, layers: []):
     f_weights = flatten_weights(weights)
     minimized_weights = minimize(fun=calculate_multi_layer_error2, x0=f_weights, args=(layers, b, points),
-                                 method="Powell", tol=0.01, options={'maxiter': 10})
+                                 method="powell", tol=0.01, options={'maxiter': 10}, callback=c_fun)
     weights = unflatten_weights(minimized_weights.x, layers)
     return weights
+
+
+Nfeval = 1
+Error = 0
+
+def c_fun(x):
+    global Nfeval
+    global Error
+    print(f"value: {Nfeval} error: {Error}")
+    Nfeval += 1
 
 
 def flatten_weights(weights: {}):

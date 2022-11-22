@@ -46,33 +46,12 @@ def show_letters():
     b = 0.8
     n = 0.01
     cot = 5000
-    layers = [35, 28, 15, 7, 2, 7, 15, 28, 35]
-    weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, True, False,
-                                                                                         0.2, 0.5,
-                                                                                         layers, True, None, 0.2)
+    layers = [35, 27, 19, 11, 2, 11, 19, 27, 35]
+    weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
+                                                                                         0.8, 0.5,
+                                                                                         layers, False, None, 0.2)
+    save_autoencoder(weights, layers, "denoising_0.8_powell")
 
-    # for p in initial_points:
-    #     h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
-    #     font_char = p.e[1:]
-    #     s = ""
-    #     for char in range(35):
-    #         if char % 5 == 0 and char != 0:
-    #             print(s)
-    #             s = ""
-    #         c = 'X' if font_char[char] > 0 else '.'
-    #         s = s + c
-    #     print(s)
-    #     print()
-    #     font_char = o_dictionary_encoder[len(layers) - 1]
-    #     s = ""
-    #     for char in range(35):
-    #         if char % 5 == 0 and char != 0:
-    #             print(s)
-    #             s = ""
-    #         c = 'X' if font_char[char] > 0 else '.'
-    #         s = s + c
-    #     print(s)
-    #     print()
 
     value = 1
     for p in initial_points:
@@ -96,7 +75,7 @@ def show_letters():
         plt.axis('off')
         value += 1
 
-    plt.savefig("./Results/Img/res_input_denoising.png", bbox_inches='tight', dpi=1800)
+    plt.savefig("./Results/Img/res_input_denoising_0.8_powell.png", bbox_inches='tight', dpi=1800)
     value = 1
     for p in initial_points:
         h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
@@ -119,7 +98,7 @@ def show_letters():
 
         value += 1
 
-        plt.savefig("./Results/Img/res_output_denoising.png", bbox_inches='tight', dpi=1800)
+    plt.savefig("./Results/Img/res_output_denoising_0.8_powell.png", bbox_inches='tight', dpi=1800)
 
 
 def error_vs_epocas():
@@ -337,7 +316,7 @@ def graph_error_vs_denoising():
     ax.set_ylabel('Error')
     ax.set_title('Autoencoder')
 
-    fig.savefig("./Results/ErrorVsDenoising/result.png", bbox_inches='tight', dmi=1800)
+    fig.savefig("./Results/ErrorVsDenoising/result.png", bbox_inches='tight', dpi=1800)
 
     plt.show()
 
@@ -396,7 +375,7 @@ def error_vs_epocas_graph_n_epochs():
 
 
 def latent_space_letter_generator():
-    weights, layers = read_autoencoder("show_letters_custom_9_6_3_2_powell")
+    weights, layers = read_autoencoder("south_park_500_3_2_3")
     b = 0.8
     size = len(layers)
     print(layers)
@@ -544,33 +523,68 @@ def show_letters_custom():
         plt.savefig("./Results/CustomImg/res_output.png", bbox_inches='tight', dpi=1800)
 
 def show_letters_custom_images():
-    w, h = 100, 75
+    w, h = 18, 18
 
 
     b = 0.8
     n = 0.01
-    cot = 100
-    layers = [30000, 3, 30000]
+    cot = 5000
+    layers = [324, 212, 106, 53, 26, 3, 2, 3, 26, 53, 106, 212, 324]
+    #layers = [3136, 3, 2, 3, 3136]
     font_size = 4
     letter_size = 30000
 
     print("Autoencoder")
     weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
-                                                                                         0.2, 0.5,
-                                                                                         layers, False, None, 0, True)
+                                                                                        0.2, 0.5,
+                                                                                     layers, False, None, 0, True)
+    save_autoencoder(weights, layers, "numbers_powell_3")
+
     index = 1
     for p in initial_points:
         h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
         font_char = o_dictionary_encoder[len(layers) - 1]
+        max = numpy.max(font_char)
+        min = numpy.min(font_char)
         image = []
         for pixel in font_char:
-            image.append(int(pixel * 255))
-        data = numpy.reshape(image, (w, h, 4))
-        img = Image.fromarray(data.astype('uint8'), 'RGBA')
-        img.save(f'./Results/SouthPark/gen_{index}.png')
+            image.append(int(255*((pixel - min)/(max-min))))
+        data = numpy.reshape(image, (w, h))
+        img = Image.fromarray(data.astype('uint8'), 'L')
+        img.save(f'./Results/Numbers/gen2_{index}.png')
         index += 1
 
+def latent_space_letter_custom_gen():
+    weights, layers = read_autoencoder("numbers")
+    b = 0.8
+    size = len(layers)
+    autoencoder_layers = layers[(int(size / 2)):]
+    new_w = {}
 
+    for i in range(int(size / 2)):
+        new_w[i + 1] = weights[i + int(size / 2) + 1]
+
+    x_values = []
+    for i in range(11):
+        x_values.append(-1 + i * 0.2)
+    y_values = copy.deepcopy(x_values)
+    points = []
+    count = 0
+    w, h = 28, 28
+    for x in x_values:
+        for y in reversed(y_values):
+            p = Point([1, x, y], [])
+            h_dictionary_encoder, o_dictionary_encoder = p_forward(autoencoder_layers, new_w, p, 0.8)
+            font_char = o_dictionary_encoder[len(autoencoder_layers) - 1]
+            image = []
+            max = numpy.max(font_char)
+            min = numpy.min(font_char)
+            for pixel in font_char:
+                image.append(int(255 * ((pixel - min) / (max - min))))
+            data = numpy.reshape(image, (w, h, 4))
+            img = Image.fromarray(data.astype('uint8'), 'RGBA')
+            img.save(f'./Results/Numbers/LatentSpace/gen_{round(x, 2)}_{round(y, 2)}.png')
+            count += 1
 def main():
     # graph_results_latent_space()
     # show_letters()
@@ -584,10 +598,11 @@ def main():
     # error_vs_denoising()
     # graph_error_vs_denoising()
     # latent_space_letter_generator_single()
-    #latent_space_letter_generator()
+    # latent_space_letter_generator()
     # graph_error_vs_denoising()
     # show_letters_custom()
     show_letters_custom_images()
+    # latent_space_letter_custom_gen()
 
 
 if __name__ == "__main__":
