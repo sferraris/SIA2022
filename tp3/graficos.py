@@ -11,6 +11,10 @@ from main import autoencoder_run
 from main import p_forward
 from main import get_font
 from tp2.declarations import Point
+import tensorflow as tf
+import keras
+from keras import layers
+from keras.datasets import mnist
 
 if platform.system() == 'Darwin':
     matplotlib.use('MacOSX')
@@ -528,28 +532,26 @@ def show_letters_custom_images():
 
     b = 0.8
     n = 0.01
-    cot = 1
+    cot = 5000
     layers1 = [324, 212, 106, 53, 26, 3, 2, 3, 26, 53, 106, 212, 324]
     layers2 = [324, 10, 3, 2, 3, 10, 324]
     layers3 = [324, 200, 100, 50, 2, 50, 100, 200, 324]
     layers4 = [324, 150, 50, 2, 50, 150, 324]
     layers5 = [324, 300, 275, 250, 225, 200, 175, 150, 125, 100, 75, 50, 25, 2, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 324]
-    layersArray = [ layers5, layers4, layers3, layers2, layers1]
-    all_labels = [ "layers5", "layers4", "layers3", "layers2", "layers1"]
+    layersArray = [layers3, layers2, layers1]
+    all_labels = ["layers3", "layers2", "layers1"]
     font_size = 4
     letter_size = 30000
 
-    print("Autoencoder")
-    for i in range(len(layersArray)):
-        weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
-                                                                                        0.2, 0.5,
-                                                                                     layersArray[i], False, None, 0, True)
-        save_autoencoder(weights, layersArray[i], f"numbers_{all_labels[i]}")
-        f = open(f"./Results/Numbers/ErrorVsEpocas/layer_{all_labels[i]}", "w")
-        for i in range(len(epocas)):
-            f.write(f"{epocas[i]} {errors[i]}\n")
-        f.close()
-    """
+    layers = [324, 10, 3, 2, 3, 10, 324]
+    weights, errors, epocas, accuracy_array, initial_points, error_min = autoencoder_run(cot, n, b, False, False, False,
+                                                                                         0.2, 0.5,
+                                                                                        layers, True, None, 0,
+                                                                                         True)
+    save_autoencoder(weights, layers, f"numbers_layers2.5000")
+
+
+
     index = 1
     for p in initial_points:
         h_dictionary_encoder, o_dictionary_encoder = p_forward(layers, weights, p, b)
@@ -563,7 +565,7 @@ def show_letters_custom_images():
         img = Image.fromarray(data.astype('uint8'), 'L')
         img.save(f'./Results/Numbers/gen2_{index}.png')
         index += 1
-"""
+
 def latent_space_letter_custom_gen():
     weights, layers = read_autoencoder("numbers")
     b = 0.8
@@ -595,6 +597,56 @@ def latent_space_letter_custom_gen():
             img = Image.fromarray(data.astype('uint8'), 'RGBA')
             img.save(f'./Results/Numbers/LatentSpace/gen_{round(x, 2)}_{round(y, 2)}.png')
             count += 1
+
+
+def keras_encoder():
+    encoding_dim = 32
+    # This is our input image
+    input_img = keras.Input(shape=(784,))
+    # "encoded" is the encoded representation of the input
+    encoded = layers.Dense(encoding_dim, activation='tanh')(input_img)
+    # "decoded" is the lossy reconstruction of the input
+    decoded = layers.Dense(784, activation='tanh')(encoded)
+    autoencoder = keras.Model(input_img, decoded)
+    encoder = keras.Model(input_img, encoded)
+    # This is our encoded (32-dimensional) input
+    encoded_input = keras.Input(shape=(encoding_dim,))
+    # Retrieve the last layer of the autoencoder model
+    decoder_layer = autoencoder.layers[-1]
+    # Create the decoder model
+    decoder = keras.Model(encoded_input, decoder_layer(encoded_input))
+    autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+    (x_train, _), (x_test, _) = mnist.load_data()
+    x_train = x_train.astype('float32') / 255.
+    x_test = x_test.astype('float32') / 255.
+    x_train = x_train.reshape((len(x_train), numpy.prod(x_train.shape[1:])))
+    x_test = x_test.reshape((len(x_test), numpy.prod(x_test.shape[1:])))
+    print(x_train.shape)
+    print(x_test.shape)
+    autoencoder.fit(x_train, x_train,
+                    epochs=50,
+                    batch_size=256,
+                    shuffle=True,
+                    validation_data=(x_test, x_test))
+    encoded_imgs = encoder.predict(x_test)
+    decoded_imgs = decoder.predict(encoded_imgs)
+    n = 10  # How many digits we will display
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # Display original
+        ax = plt.subplot(2, n, i + 1)
+        plt.imshow(x_test[i].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # Display reconstruction
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(decoded_imgs[i].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.show()
 def main():
     # graph_results_latent_space()
     # show_letters()
@@ -611,8 +663,9 @@ def main():
     # latent_space_letter_generator()
     # graph_error_vs_denoising()
     # show_letters_custom()
-    show_letters_custom_images()
+    # show_letters_custom_images()
     # latent_space_letter_custom_gen()
+    keras_encoder()
 
 
 if __name__ == "__main__":
